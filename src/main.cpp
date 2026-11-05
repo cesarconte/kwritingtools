@@ -23,6 +23,7 @@
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
+    KLocalizedString::setApplicationDomain("kwritingtools");
     app.setApplicationName(QStringLiteral("kwritingtools"));
     app.setApplicationDisplayName(QStringLiteral("Herramientas de Escritura"));
     app.setOrganizationDomain(QStringLiteral("cesar.org"));
@@ -76,7 +77,7 @@ int main(int argc, char *argv[])
     WritingToolsController controller;
 
     if (bus.isConnected()) {
-        bus.registerObject(objectPath, &controller, QDBusConnection::ExportAllSlots);
+        bus.registerObject(objectPath, &controller, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllProperties);
     }
 
     // Atajo de teclado global Meta+Shift+W vía KF6 GlobalAccel
