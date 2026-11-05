@@ -19,7 +19,7 @@ class WritingToolsController : public QObject
     Q_OBJECT
 
     Q_PROPERTY(QString selectedText READ selectedText WRITE setSelectedText NOTIFY selectedTextChanged)
-    Q_PROPERTY(QString resultText READ resultText NOTIFY resultTextChanged)
+    Q_PROPERTY(QString resultText READ resultText WRITE setResultText NOTIFY resultTextChanged)
     Q_PROPERTY(bool isGenerating READ isGenerating NOTIFY isGeneratingChanged)
     Q_PROPERTY(QString currentAction READ currentAction NOTIFY currentActionChanged)
     Q_PROPERTY(QString currentTone READ currentTone NOTIFY currentToneChanged)
@@ -34,6 +34,8 @@ public:
     void setSelectedText(const QString &text);
 
     QString resultText() const { return m_resultText; }
+    void setResultText(const QString &text);
+
     bool isGenerating() const { return m_isGenerating; }
     QString currentAction() const { return m_currentAction; }
     QString currentTone() const { return m_currentTone; }
@@ -44,6 +46,9 @@ public:
     // QML / User Invocations
     Q_INVOKABLE void captureSelection();
     Q_INVOKABLE void applyAction(const QString &action, const QString &tone = QString());
+    Q_INVOKABLE void regenerate();
+    Q_INVOKABLE void clearResult();
+    Q_INVOKABLE void clearAll();
     Q_INVOKABLE void replaceInApp();
     Q_INVOKABLE void copyResult();
     Q_INVOKABLE void cancelGeneration();

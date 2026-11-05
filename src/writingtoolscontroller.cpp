@@ -30,6 +30,47 @@ void WritingToolsController::setSelectedText(const QString &text)
     }
 }
 
+void WritingToolsController::setResultText(const QString &text)
+{
+    if (m_resultText != text) {
+        m_resultText = text;
+        Q_EMIT resultTextChanged();
+    }
+}
+
+void WritingToolsController::clearResult()
+{
+    cancelGeneration();
+    m_resultText.clear();
+    m_currentAction.clear();
+    m_currentTone.clear();
+    Q_EMIT resultTextChanged();
+    Q_EMIT currentActionChanged();
+    Q_EMIT currentToneChanged();
+    setStatus(QStringLiteral("Sugerencia descartada"));
+}
+
+void WritingToolsController::regenerate()
+{
+    if (!m_currentAction.isEmpty()) {
+        applyAction(m_currentAction, m_currentTone);
+    }
+}
+
+void WritingToolsController::clearAll()
+{
+    cancelGeneration();
+    m_selectedText.clear();
+    m_resultText.clear();
+    m_currentAction.clear();
+    m_currentTone.clear();
+    Q_EMIT selectedTextChanged();
+    Q_EMIT resultTextChanged();
+    Q_EMIT currentActionChanged();
+    Q_EMIT currentToneChanged();
+    setStatus(QStringLiteral("Listo para nuevo texto"));
+}
+
 void WritingToolsController::setHudVisible(bool visible)
 {
     if (m_hudVisible != visible) {

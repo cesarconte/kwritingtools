@@ -91,6 +91,18 @@ private Q_SLOTS:
         ctrl.setHudVisible(false);
         QCOMPARE(hudSpy.count(), 2);
         QCOMPARE(ctrl.hudVisible(), false);
+
+        ctrl.setResultText(QStringLiteral("Resultado generado"));
+        QCOMPARE(ctrl.resultText(), QStringLiteral("Resultado generado"));
+
+        ctrl.clearResult();
+        QCOMPARE(ctrl.resultText(), QString());
+        QCOMPARE(ctrl.currentAction(), QString());
+
+        ctrl.setSelectedText(QStringLiteral("Texto"));
+        ctrl.clearAll();
+        QCOMPARE(ctrl.selectedText(), QString());
+        QCOMPARE(ctrl.resultText(), QString());
     }
 };
 
