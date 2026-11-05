@@ -12,10 +12,10 @@ Kirigami.ApplicationWindow {
     id: root
 
     title: i18n("Herramientas de Escritura")
-    width: 620
-    height: 580
-    minimumWidth: 500
-    minimumHeight: 460
+    width: 680
+    height: 640
+    minimumWidth: 580
+    minimumHeight: 520
 
     flags: Qt.Dialog | Qt.FramelessWindowHint
 
@@ -29,73 +29,104 @@ Kirigami.ApplicationWindow {
         close.accepted = false;
     }
 
-    // Background Container with Liquid Glass and Apple Intelligence Glow Border
+    DragHandler {
+        target: null
+        grabPermissions: PointerHandler.CanTakeOverFromItems | PointerHandler.ApprovesTakeOverByAnything
+        onActiveChanged: {
+            if (active) {
+                root.startSystemMove();
+            }
+        }
+    }
+
+    // Outer Glow / Border and Glass Background Container
     Rectangle {
         id: bgContainer
         anchors.fill: parent
-        radius: 18
-        color: Kirigami.ColorUtils.tintWithAlpha(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.04)
-        border.width: 2
-        border.color: Controller.isGenerating ? "#D63384" : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.18)
+        radius: 16
+        clip: true
+        color: Kirigami.ColorUtils.tintWithAlpha(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.03)
+        border.width: 1.5
+        border.color: Controller.isGenerating
+            ? "#D63384"
+            : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.20)
 
-        // Iridescent subtle glow border
+        // Iridescent subtle glow border on generation
         Rectangle {
             anchors.fill: parent
             anchors.margins: -1
-            radius: 19
+            radius: 17
             z: -1
-            opacity: Controller.isGenerating ? 0.85 : 0.45
+            opacity: Controller.isGenerating ? 0.9 : 0.35
             color: "transparent"
             border.width: 1.5
-            border.color: "#6F42C1"
+            border.color: Controller.isGenerating ? "#0DCAF0" : "#6F42C1"
+
+            Behavior on opacity {
+                NumberAnimation { duration: 250 }
+            }
         }
 
         ColumnLayout {
             anchors.fill: parent
-            anchors.margins: Kirigami.Units.largeSpacing
-            spacing: Kirigami.Units.mediumSpacing
+            anchors.margins: 14
+            spacing: 10
 
             // 1. Header Bar
             RowLayout {
                 Layout.fillWidth: true
-                spacing: Kirigami.Units.smallSpacing
+                spacing: 8
 
                 Kirigami.Icon {
                     source: "document-edit-symbolic"
-                    implicitWidth: 22
-                    implicitHeight: 22
-                    color: "#D63384"
+                    implicitWidth: 20
+                    implicitHeight: 20
+                    color: Controller.isGenerating ? "#D63384" : Kirigami.Theme.highlightColor
                 }
 
                 QQC2.Label {
                     text: i18n("Herramientas de Escritura")
                     font.bold: true
-                    font.pixelSize: Kirigami.Theme.defaultFont.pixelSize + 2
+                    font.pixelSize: Kirigami.Theme.defaultFont.pixelSize + 1
                     color: Kirigami.Theme.textColor
                 }
 
                 Item { Layout.fillWidth: true }
 
-                // Model / Engine badge
+                // Model / Apple Intelligence Badge
                 Rectangle {
                     radius: 10
-                    height: 20
-                    width: badgeText.implicitWidth + 14
-                    color: Kirigami.ColorUtils.tintWithAlpha(Kirigami.Theme.backgroundColor, Kirigami.Theme.highlightColor, 0.15)
+                    height: 22
+                    width: badgeRow.implicitWidth + 16
+                    color: Kirigami.ColorUtils.tintWithAlpha(Kirigami.Theme.backgroundColor, Kirigami.Theme.highlightColor, 0.12)
                     border.width: 1
                     border.color: Kirigami.ColorUtils.tintWithAlpha(Kirigami.Theme.backgroundColor, Kirigami.Theme.highlightColor, 0.3)
 
-                    QQC2.Label {
-                        id: badgeText
+                    RowLayout {
+                        id: badgeRow
                         anchors.centerIn: parent
-                        text: "Apple Intelligence (Qwen 2.5)"
-                        font.pixelSize: Kirigami.Theme.smallFont.pixelSize - 1
-                        color: Kirigami.Theme.highlightColor
+                        spacing: 4
+
+                        Rectangle {
+                            width: 6
+                            height: 6
+                            radius: 3
+                            color: Controller.isGenerating ? "#20c997" : Kirigami.Theme.highlightColor
+                        }
+
+                        QQC2.Label {
+                            text: "Apple Intelligence (Qwen 2.5)"
+                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize - 1
+                            font.bold: true
+                            color: Kirigami.Theme.highlightColor
+                        }
                     }
                 }
 
                 QQC2.ToolButton {
                     icon.name: "window-close-symbolic"
+                    implicitWidth: 28
+                    implicitHeight: 28
                     onClicked: {
                         if (Controller) {
                             Controller.hudVisible = false;
@@ -108,101 +139,181 @@ Kirigami.ApplicationWindow {
                 }
             }
 
-            // 2. Source Text Input (Collapsible / Compact)
+            // 2. Source Text Card (Compact & Clean)
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: Math.min(100, Math.max(60, sourceEditor.contentHeight + 20))
+                Layout.preferredHeight: Math.min(100, Math.max(72, sourceEditor.contentHeight + 36))
                 radius: 10
                 color: Kirigami.Theme.alternateBackgroundColor
                 border.width: 1
                 border.color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.12)
 
-                Flickable {
+                ColumnLayout {
                     anchors.fill: parent
                     anchors.margins: 8
-                    contentWidth: width
-                    contentHeight: sourceEditor.contentHeight
-                    clip: true
+                    spacing: 4
 
-                    QQC2.TextArea {
-                        id: sourceEditor
-                        width: parent.width
-                        text: Controller.selectedText
-                        placeholderText: i18n("Selecciona o pega el texto que deseas mejorar...")
-                        wrapMode: TextEdit.Wrap
-                        font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                        color: Kirigami.Theme.textColor
-                        background: null
-                        onTextChanged: {
-                            if (text !== Controller.selectedText) {
-                                Controller.selectedText = text;
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        QQC2.Label {
+                            text: i18n("Texto original")
+                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize - 1
+                            font.bold: true
+                            color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.textColor, Kirigami.Theme.backgroundColor, 0.4)
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        QQC2.Label {
+                            text: Controller.selectedText.length > 0 ? (Controller.selectedText.length + " " + i18n("caracteres")) : ""
+                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize - 2
+                            color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.textColor, Kirigami.Theme.backgroundColor, 0.5)
+                        }
+
+                        QQC2.ToolButton {
+                            icon.name: "edit-paste"
+                            implicitWidth: 20
+                            implicitHeight: 20
+                            QQC2.ToolTip.text: i18n("Capturar selección activa de nuevo")
+                            QQC2.ToolTip.visible: hovered
+                            onClicked: Controller.captureSelection()
+                        }
+                    }
+
+                    Flickable {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        contentWidth: width
+                        contentHeight: sourceEditor.contentHeight
+                        clip: true
+
+                        QQC2.TextArea {
+                            id: sourceEditor
+                            width: parent.width
+                            text: Controller.selectedText
+                            placeholderText: i18n("Selecciona texto en cualquier aplicación o pégalo aquí...")
+                            wrapMode: TextEdit.Wrap
+                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                            color: Kirigami.Theme.textColor
+                            background: null
+                            selectByMouse: true
+                            onTextChanged: {
+                                if (text !== Controller.selectedText) {
+                                    Controller.selectedText = text;
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // 3. Action Pills Toolbar
-            RowLayout {
+            // 3. Action Toolbar (KDE HIG & Apple Intelligence Categorized Grid)
+            Rectangle {
                 Layout.fillWidth: true
-                spacing: Kirigami.Units.smallSpacing
+                implicitHeight: actionsLayout.implicitHeight + 16
+                radius: 10
+                color: Kirigami.ColorUtils.tintWithAlpha(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.02)
+                border.width: 1
+                border.color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.12)
 
-                QQC2.Button {
-                    text: i18n("✓ Corregir")
-                    highlighted: Controller.currentAction === "proofread"
-                    enabled: !Controller.isGenerating && Controller.selectedText.length > 0
-                    onClicked: Controller.applyAction("proofread")
-                }
+                ColumnLayout {
+                    id: actionsLayout
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    spacing: 6
 
-                QQC2.Button {
-                    text: i18n("↻ Reescribir")
-                    highlighted: Controller.currentAction === "rewrite" && Controller.currentTone === ""
-                    enabled: !Controller.isGenerating && Controller.selectedText.length > 0
-                    onClicked: Controller.applyAction("rewrite", "")
-                }
+                    // Row A: Transformaciones y Corrección directa
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
 
-                QQC2.Button {
-                    text: i18n("😊 Amigable")
-                    highlighted: Controller.currentAction === "rewrite" && Controller.currentTone === "friendly"
-                    enabled: !Controller.isGenerating && Controller.selectedText.length > 0
-                    onClicked: Controller.applyAction("rewrite", "friendly")
-                }
+                        QQC2.Button {
+                            Layout.fillWidth: true
+                            icon.name: "tools-check-spelling"
+                            text: i18n("Corregir")
+                            highlighted: Controller.currentAction === "proofread"
+                            enabled: !Controller.isGenerating && Controller.selectedText.length > 0
+                            onClicked: Controller.applyAction("proofread")
+                        }
 
-                QQC2.Button {
-                    text: i18n("💼 Profesional")
-                    highlighted: Controller.currentAction === "rewrite" && Controller.currentTone === "professional"
-                    enabled: !Controller.isGenerating && Controller.selectedText.length > 0
-                    onClicked: Controller.applyAction("rewrite", "professional")
-                }
+                        QQC2.Button {
+                            Layout.fillWidth: true
+                            icon.name: "view-list-tree"
+                            text: i18n("Resumir")
+                            highlighted: Controller.currentAction === "summary"
+                            enabled: !Controller.isGenerating && Controller.selectedText.length > 0
+                            onClicked: Controller.applyAction("summary")
+                        }
 
-                QQC2.Button {
-                    text: i18n("⚡ Conciso")
-                    highlighted: Controller.currentAction === "rewrite" && Controller.currentTone === "concise"
-                    enabled: !Controller.isGenerating && Controller.selectedText.length > 0
-                    onClicked: Controller.applyAction("rewrite", "concise")
-                }
+                        QQC2.Button {
+                            Layout.fillWidth: true
+                            icon.name: "format-list-unordered"
+                            text: i18n("Puntos clave")
+                            highlighted: Controller.currentAction === "keypoints"
+                            enabled: !Controller.isGenerating && Controller.selectedText.length > 0
+                            onClicked: Controller.applyAction("keypoints")
+                        }
 
-                Item { Layout.fillWidth: true }
+                        QQC2.Button {
+                            Layout.fillWidth: true
+                            icon.name: "view-form-table"
+                            text: i18n("Tabla")
+                            highlighted: Controller.currentAction === "table"
+                            enabled: !Controller.isGenerating && Controller.selectedText.length > 0
+                            onClicked: Controller.applyAction("table")
+                        }
+                    }
 
-                QQC2.Button {
-                    text: i18n("📝 Resumir")
-                    highlighted: Controller.currentAction === "summary"
-                    enabled: !Controller.isGenerating && Controller.selectedText.length > 0
-                    onClicked: Controller.applyAction("summary")
-                }
+                    // Row B: Reescribir por Tonos (Apple Intelligence Tone Pills)
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
 
-                QQC2.Button {
-                    text: i18n("• Puntos clave")
-                    highlighted: Controller.currentAction === "keypoints"
-                    enabled: !Controller.isGenerating && Controller.selectedText.length > 0
-                    onClicked: Controller.applyAction("keypoints")
-                }
+                        QQC2.Label {
+                            text: i18n("Reescribir:")
+                            font.bold: true
+                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                            color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.textColor, Kirigami.Theme.backgroundColor, 0.3)
+                        }
 
-                QQC2.Button {
-                    text: i18n("⊞ Tabla")
-                    highlighted: Controller.currentAction === "table"
-                    enabled: !Controller.isGenerating && Controller.selectedText.length > 0
-                    onClicked: Controller.applyAction("table")
+                        QQC2.Button {
+                            Layout.fillWidth: true
+                            icon.name: "document-edit-symbolic"
+                            text: i18n("Estándar")
+                            highlighted: Controller.currentAction === "rewrite" && Controller.currentTone === ""
+                            enabled: !Controller.isGenerating && Controller.selectedText.length > 0
+                            onClicked: Controller.applyAction("rewrite", "")
+                        }
+
+                        QQC2.Button {
+                            Layout.fillWidth: true
+                            icon.name: "user"
+                            text: i18n("Amigable")
+                            highlighted: Controller.currentAction === "rewrite" && Controller.currentTone === "friendly"
+                            enabled: !Controller.isGenerating && Controller.selectedText.length > 0
+                            onClicked: Controller.applyAction("rewrite", "friendly")
+                        }
+
+                        QQC2.Button {
+                            Layout.fillWidth: true
+                            icon.name: "mail-signed"
+                            text: i18n("Profesional")
+                            highlighted: Controller.currentAction === "rewrite" && Controller.currentTone === "professional"
+                            enabled: !Controller.isGenerating && Controller.selectedText.length > 0
+                            onClicked: Controller.applyAction("rewrite", "professional")
+                        }
+
+                        QQC2.Button {
+                            Layout.fillWidth: true
+                            icon.name: "speedometer"
+                            text: i18n("Conciso")
+                            highlighted: Controller.currentAction === "rewrite" && Controller.currentTone === "concise"
+                            enabled: !Controller.isGenerating && Controller.selectedText.length > 0
+                            onClicked: Controller.applyAction("rewrite", "concise")
+                        }
+                    }
                 }
             }
 
@@ -210,47 +321,93 @@ Kirigami.ApplicationWindow {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                radius: 12
+                radius: 10
                 color: Kirigami.Theme.backgroundColor
                 border.width: 1
-                border.color: Controller.isGenerating ? "#0DCAF0" : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.15)
+                border.color: Controller.isGenerating
+                    ? "#0DCAF0"
+                    : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.15)
 
-                Flickable {
-                    id: resultFlickable
+                ColumnLayout {
                     anchors.fill: parent
-                    anchors.margins: Kirigami.Units.mediumSpacing
-                    contentWidth: width
-                    contentHeight: resultLabel.contentHeight
-                    clip: true
+                    anchors.margins: 10
+                    spacing: 6
 
-                    QQC2.TextArea {
-                        id: resultLabel
-                        width: parent.width
-                        text: Controller.resultText
-                        placeholderText: Controller.isGenerating
-                            ? i18n("Apple Intelligence está procesando tu texto...")
-                            : i18n("El resultado generado aparecerá aquí listo para sustituir o copiar.")
-                        readOnly: true
-                        selectByMouse: true
-                        wrapMode: TextEdit.Wrap
-                        color: Kirigami.Theme.textColor
-                        font.pixelSize: Kirigami.Theme.defaultFont.pixelSize
-                        background: null
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        QQC2.Label {
+                            text: i18n("Resultado sugerido")
+                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize - 1
+                            font.bold: true
+                            color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.textColor, Kirigami.Theme.backgroundColor, 0.4)
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        QQC2.BusyIndicator {
+                            running: Controller.isGenerating
+                            visible: Controller.isGenerating
+                            implicitWidth: 16
+                            implicitHeight: 16
+                        }
+
+                        QQC2.Label {
+                            visible: Controller.resultText.length > 0
+                            text: Controller.resultText.length + " " + i18n("caracteres")
+                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize - 2
+                            color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.textColor, Kirigami.Theme.backgroundColor, 0.5)
+                        }
+                    }
+
+                    Flickable {
+                        id: resultFlickable
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        contentWidth: width
+                        contentHeight: resultLabel.contentHeight
+                        clip: true
+
+                        QQC2.TextArea {
+                            id: resultLabel
+                            width: parent.width
+                            text: Controller.resultText
+                            placeholderText: Controller.isGenerating
+                                ? i18n("Apple Intelligence está procesando tu texto...")
+                                : i18n("Elige una de las acciones arriba para mejorar el texto seleccionado.")
+                            readOnly: true
+                            selectByMouse: true
+                            wrapMode: TextEdit.Wrap
+                            color: Kirigami.Theme.textColor
+                            font.pixelSize: Kirigami.Theme.defaultFont.pixelSize
+                            background: null
+                        }
                     }
                 }
             }
 
-            // 5. Status & Footer Action Bar
+            // 5. Footer Bar (Status & Primary Actions)
             RowLayout {
                 Layout.fillWidth: true
-                spacing: Kirigami.Units.smallSpacing
+                spacing: 8
 
                 QQC2.Label {
                     Layout.fillWidth: true
+                    Layout.maximumWidth: root.width - 320
                     text: Controller.statusMessage
                     elide: Text.ElideRight
                     font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                    color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.textColor, Kirigami.Theme.backgroundColor, 0.4)
+                    color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.textColor, Kirigami.Theme.backgroundColor, 0.35)
+                }
+
+                Item { Layout.fillWidth: true }
+
+                QQC2.Button {
+                    text: i18n("Cancelar")
+                    icon.name: "process-stop"
+                    visible: Controller.isGenerating
+                    onClicked: Controller.cancelGeneration()
                 }
 
                 QQC2.Button {
