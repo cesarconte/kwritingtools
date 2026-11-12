@@ -1,25 +1,46 @@
 /*
-    SPDX-FileCopyrightText: 2026 Cesar <yugurta@gmail.com>
+    SPDX-FileCopyrightText: 2026 Cesar
     SPDX-License-Identifier: GPL-2.0-or-later
+
+    KWritingTools — Herramientas de escritura con IA local.
+
+    Diseño Golden Gate / Liquid Glass (CachyOS.UI):
+      * ventana `CachyWindow` con marco translúcido, cabecera de 44 px con el
+        divisor duro de 1 px y radio de 20 px;
+      * la identidad de la aplicación y la insignia del modelo viven en la
+        cabecera, las acciones primarias en el pie;
+      * el texto original, la rejilla de acciones y el resultado se presentan
+        sobre `CachyCard`;
+      * toda la paleta, los radios y los espaciados salen de `CachyTheme`.
 */
+
+pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import CachyOS.UI
 
-Kirigami.ApplicationWindow {
+CachyWindow {
     id: root
 
-    title: i18n("Herramientas de Escritura")
-    width: 680
-    height: 640
-    minimumWidth: 580
-    minimumHeight: 520
+    title: CachyI18n.i18n("Herramientas de Escritura")
 
-    flags: Qt.Dialog | Qt.FramelessWindowHint
+    // Canonical proportion of the ecosystem (1.33): the panel keeps a stable
+    // shape and the result area takes the freed space.
+    width: 720
+    height: 540
+    minimumWidth: 560
+    minimumHeight: 460
 
-    color: "transparent"
+    showTrafficLights: true
+    showTitleBarDivider: true          // divisor duro de 1 px
+    showWindowFrame: true              // Liquid Glass: blur KWin + rim especular
+    resizable: true
+    cornerRadius: CachyTheme.radiusWindow
+    contentPadded: true                // margen perimetral de 18 px
+
     visible: Controller ? Controller.hudVisible : false
 
     property bool sourceExpanded: true
@@ -42,160 +63,136 @@ Kirigami.ApplicationWindow {
         }
     }
 
-    // Outer Glow / Border and Glass Background Container
-    Rectangle {
-        id: bgContainer
-        anchors.fill: parent
-        radius: 16
-        clip: true
-        color: Kirigami.ColorUtils.tintWithAlpha(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.03)
-        border.width: 1.5
-        border.color: Controller.isGenerating
-            ? "#D63384"
-            : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.20)
+    // =========================================================================
+    // CABECERA — IZQUIERDA: marca de la aplicación
+    // =========================================================================
+    headerLeading: [
+        Kirigami.Icon {
+            anchors.verticalCenter: parent.verticalCenter
+            source: "document-edit-symbolic"
+            width: 18
+            height: 18
+            color: Controller.isGenerating ? CachyTheme.accentColor : CachyTheme.textMuted
+        }
+    ]
 
-        // Iridescent subtle glow border on generation
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: -1
-            radius: 17
-            z: -1
-            opacity: Controller.isGenerating ? 0.9 : 0.35
-            color: "transparent"
-            border.width: 1.5
-            border.color: Controller.isGenerating ? "#0DCAF0" : "#6F42C1"
+    // =========================================================================
+    // CABECERA — DERECHA: insignia del modelo y cerrar
+    // =========================================================================
+    headerActions: [
+        RowLayout {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 6
 
-            Behavior on opacity {
-                NumberAnimation { duration: 250 }
+            // Insignia del modelo local
+            Rectangle {
+                height: 24
+                implicitWidth: badgeRow.implicitWidth + 16
+                radius: 12
+                color: CachyTheme.withAlpha(CachyTheme.accentColor, 0.14)
+                border.width: 1
+                border.color: CachyTheme.withAlpha(CachyTheme.accentColor, 0.32)
+
+                RowLayout {
+                    id: badgeRow
+                    anchors.centerIn: parent
+                    spacing: 5
+
+                    Rectangle {
+                        Layout.preferredWidth: 6
+                        Layout.preferredHeight: 6
+                        radius: 3
+                        color: Controller.isGenerating ? "#30D158" : CachyTheme.accentColor
+
+                        Behavior on color {
+                            ColorAnimation { duration: CachyTheme.animFast }
+                        }
+                    }
+
+                    Text {
+                        text: CachyI18n.i18n("IA local (Qwen 2.5)")
+                        font.pixelSize: 10
+                        font.weight: Font.DemiBold
+                        color: CachyTheme.accentColor
+                    }
+                }
+            }
+
+            CachyToolbarButton {
+                iconName: "window-close-symbolic"
+                tooltipText: CachyI18n.i18n("Cerrar (Esc)")
+                onClicked: {
+                    if (Controller) {
+                        Controller.hudVisible = false;
+                    } else {
+                        root.close();
+                    }
+                }
             }
         }
+    ]
 
+    // =========================================================================
+    // CONTENIDO
+    // =========================================================================
+    contentData: [
         ColumnLayout {
             anchors.fill: parent
-            anchors.margins: 14
-            spacing: 10
+            spacing: CachyTheme.spacingMedium
 
-            // 1. Header Bar
-            RowLayout {
+            // -----------------------------------------------------------------
+            // Texto original (plegable y desplazable)
+            // -----------------------------------------------------------------
+            CachyCard {
                 Layout.fillWidth: true
-                spacing: 8
-
-                Kirigami.Icon {
-                    source: "document-edit-symbolic"
-                    implicitWidth: 20
-                    implicitHeight: 20
-                    color: Controller.isGenerating ? "#D63384" : Kirigami.Theme.highlightColor
-                }
-
-                QQC2.Label {
-                    text: i18n("Herramientas de Escritura")
-                    font.bold: true
-                    font.pixelSize: Kirigami.Theme.defaultFont.pixelSize + 1
-                    color: Kirigami.Theme.textColor
-                }
-
-                Item { Layout.fillWidth: true }
-
-                // Model / Apple Intelligence Badge
-                Rectangle {
-                    radius: 10
-                    height: 22
-                    width: badgeRow.implicitWidth + 16
-                    color: Kirigami.ColorUtils.tintWithAlpha(Kirigami.Theme.backgroundColor, Kirigami.Theme.highlightColor, 0.12)
-                    border.width: 1
-                    border.color: Kirigami.ColorUtils.tintWithAlpha(Kirigami.Theme.backgroundColor, Kirigami.Theme.highlightColor, 0.3)
-
-                    RowLayout {
-                        id: badgeRow
-                        anchors.centerIn: parent
-                        spacing: 4
-
-                        Rectangle {
-                            width: 6
-                            height: 6
-                            radius: 3
-                            color: Controller.isGenerating ? "#20c997" : Kirigami.Theme.highlightColor
-                        }
-
-                        QQC2.Label {
-                            text: "Apple Intelligence (Qwen 2.5)"
-                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize - 1
-                            font.bold: true
-                            color: Kirigami.Theme.highlightColor
-                        }
-                    }
-                }
-
-                QQC2.ToolButton {
-                    icon.name: "window-close-symbolic"
-                    implicitWidth: 28
-                    implicitHeight: 28
-                    onClicked: {
-                        if (Controller) {
-                            Controller.hudVisible = false;
-                        } else {
-                            root.close();
-                        }
-                    }
-                    QQC2.ToolTip.text: i18n("Cerrar (Esc)")
-                    QQC2.ToolTip.visible: hovered
-                }
-            }
-
-            // 2. Source Text Card (Responsive, Scrollable & Collapsible)
-            Rectangle {
-                Layout.fillWidth: true
+                Layout.minimumWidth: 0
                 Layout.preferredHeight: {
                     if (!root.sourceExpanded) {
-                        return 38;
+                        return 52;
                     }
                     if (root.hasResult) {
-                        return Math.min(130, Math.max(78, sourceEditor.contentHeight + 42));
+                        return Math.min(140, Math.max(86, sourceEditor.contentHeight + 46));
                     }
-                    return Math.min(220, Math.max(90, sourceEditor.contentHeight + 42));
+                    return Math.min(230, Math.max(96, sourceEditor.contentHeight + 46));
                 }
-                radius: 10
-                color: Kirigami.Theme.alternateBackgroundColor
-                border.width: 1
-                border.color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.12)
-                clip: true
 
                 Behavior on Layout.preferredHeight {
                     NumberAnimation { duration: 200; easing.type: Easing.InOutQuad }
                 }
 
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: 8
+                contentItem: ColumnLayout {
                     spacing: 4
 
-                    // Source Card Toolbar
+                    // --- Barra de la tarjeta ---
                     RowLayout {
                         Layout.fillWidth: true
+                        Layout.minimumWidth: 0
                         spacing: 6
 
                         Kirigami.Icon {
                             source: "edit-find-replace"
-                            implicitWidth: 14
-                            implicitHeight: 14
-                            color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.textColor, Kirigami.Theme.backgroundColor, 0.4)
+                            Layout.preferredWidth: 14
+                            Layout.preferredHeight: 14
+                            color: CachyTheme.textMuted
                         }
 
-                        QQC2.Label {
-                            text: i18n("Texto original")
-                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize - 1
-                            font.bold: true
-                            color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.textColor, Kirigami.Theme.backgroundColor, 0.4)
+                        Text {
+                            text: CachyI18n.i18n("Texto original")
+                            font.pixelSize: 10
+                            font.weight: Font.DemiBold
+                            color: CachyTheme.textMuted
+                            elide: Text.ElideRight
                         }
 
-                        // Collapsed one-line preview
-                        QQC2.Label {
+                        // Vista previa de una línea cuando está plegado
+                        Text {
                             visible: !root.sourceExpanded
                             Layout.fillWidth: true
+                            Layout.minimumWidth: 0
                             text: "— " + Controller.selectedText.replace(/[\r\n]+/g, " ")
                             elide: Text.ElideRight
-                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize - 1
-                            color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.textColor, Kirigami.Theme.backgroundColor, 0.5)
+                            font.pixelSize: 11
+                            color: CachyTheme.textMuted
                         }
 
                         Item {
@@ -203,45 +200,42 @@ Kirigami.ApplicationWindow {
                             Layout.fillWidth: true
                         }
 
-                        QQC2.Label {
-                            text: Controller.selectedText.length > 0 ? (Controller.selectedText.length + " " + i18n("caracteres")) : ""
-                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize - 2
-                            color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.textColor, Kirigami.Theme.backgroundColor, 0.5)
+                        Text {
+                            visible: root.sourceExpanded
+                            text: Controller.selectedText.length > 0
+                                ? (Controller.selectedText.length + " " + CachyI18n.i18n("caracteres"))
+                                : ""
+                            font.pixelSize: 10
+                            color: CachyTheme.textMuted
+                            elide: Text.ElideRight
                         }
 
-                        QQC2.ToolButton {
-                            icon.name: root.sourceExpanded ? "arrow-up" : "arrow-down"
-                            implicitWidth: 22
-                            implicitHeight: 22
-                            QQC2.ToolTip.text: root.sourceExpanded ? i18n("Colapsar texto original") : i18n("Expandir texto original")
-                            QQC2.ToolTip.visible: hovered
+                        CachyToolbarButton {
+                            iconName: root.sourceExpanded ? "arrow-up-symbolic" : "arrow-down-symbolic"
+                            tooltipText: root.sourceExpanded
+                                ? CachyI18n.i18n("Plegar el texto original")
+                                : CachyI18n.i18n("Desplegar el texto original")
                             onClicked: root.sourceExpanded = !root.sourceExpanded
                         }
 
-                        QQC2.ToolButton {
-                            icon.name: "edit-paste"
-                            implicitWidth: 22
-                            implicitHeight: 22
-                            QQC2.ToolTip.text: i18n("Pegar selección activa del sistema")
-                            QQC2.ToolTip.visible: hovered
+                        CachyToolbarButton {
+                            iconName: "edit-paste"
+                            tooltipText: CachyI18n.i18n("Pegar la selección activa del sistema")
                             onClicked: {
                                 Controller.captureSelection();
                                 root.sourceExpanded = true;
                             }
                         }
 
-                        QQC2.ToolButton {
-                            icon.name: "edit-clear"
-                            implicitWidth: 22
-                            implicitHeight: 22
+                        CachyToolbarButton {
+                            iconName: "edit-clear"
+                            tooltipText: CachyI18n.i18n("Limpiar el texto")
                             visible: Controller.selectedText.length > 0
-                            QQC2.ToolTip.text: i18n("Limpiar texto")
-                            QQC2.ToolTip.visible: hovered
                             onClicked: Controller.clearAll()
                         }
                     }
 
-                    // Native ScrollView for limitless smooth navigation & scrolling
+                    // --- Editor ---
                     QQC2.ScrollView {
                         visible: root.sourceExpanded
                         Layout.fillWidth: true
@@ -253,12 +247,16 @@ Kirigami.ApplicationWindow {
                             id: sourceEditor
                             width: parent.width
                             text: Controller.selectedText
-                            placeholderText: i18n("Selecciona texto en cualquier aplicación o pégalo aquí...")
+                            placeholderText: CachyI18n.i18n("Selecciona texto en cualquier aplicación o pégalo aquí…")
                             wrapMode: TextEdit.Wrap
-                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                            color: Kirigami.Theme.textColor
+                            font.pixelSize: 12
+                            color: CachyTheme.textPrimary
+                            selectionColor: CachyTheme.accentColor
+                            selectedTextColor: "#FFFFFF"
+                            placeholderTextColor: CachyTheme.textMuted
                             background: null
                             selectByMouse: true
+
                             onTextChanged: {
                                 if (text !== Controller.selectedText) {
                                     Controller.selectedText = text;
@@ -269,31 +267,27 @@ Kirigami.ApplicationWindow {
                 }
             }
 
-            // 3. Action Toolbar (KDE HIG & Apple Intelligence Categorized Grid)
-            Rectangle {
+            // -----------------------------------------------------------------
+            // Rejilla de acciones
+            // -----------------------------------------------------------------
+            CachyCard {
                 Layout.fillWidth: true
-                implicitHeight: actionsLayout.implicitHeight + 16
-                radius: 10
-                color: Kirigami.ColorUtils.tintWithAlpha(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.02)
-                border.width: 1
-                border.color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.12)
+                Layout.minimumWidth: 0
 
-                ColumnLayout {
-                    id: actionsLayout
-                    anchors.fill: parent
-                    anchors.margins: 8
+                contentItem: ColumnLayout {
                     spacing: 6
 
-                    // Row A: Transformaciones y Corrección directa
+                    // --- Fila A: correcciones directas ---
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 8
+                        Layout.minimumWidth: 0
+                        spacing: 6
 
-                        QQC2.Button {
+                        CachyToolbarButton {
                             Layout.fillWidth: true
-                            icon.name: "tools-check-spelling"
-                            text: i18n("Corregir")
-                            highlighted: Controller.currentAction === "proofread"
+                            iconName: "tools-check-spelling"
+                            text: CachyI18n.i18n("Corregir")
+                            checked: Controller.currentAction === "proofread"
                             enabled: !Controller.isGenerating && Controller.selectedText.length > 0
                             onClicked: {
                                 Controller.applyAction("proofread");
@@ -303,11 +297,11 @@ Kirigami.ApplicationWindow {
                             }
                         }
 
-                        QQC2.Button {
+                        CachyToolbarButton {
                             Layout.fillWidth: true
-                            icon.name: "view-list-tree"
-                            text: i18n("Resumir")
-                            highlighted: Controller.currentAction === "summary"
+                            iconName: "view-list-tree"
+                            text: CachyI18n.i18n("Resumir")
+                            checked: Controller.currentAction === "summary"
                             enabled: !Controller.isGenerating && Controller.selectedText.length > 0
                             onClicked: {
                                 Controller.applyAction("summary");
@@ -317,11 +311,11 @@ Kirigami.ApplicationWindow {
                             }
                         }
 
-                        QQC2.Button {
+                        CachyToolbarButton {
                             Layout.fillWidth: true
-                            icon.name: "format-list-unordered"
-                            text: i18n("Puntos clave")
-                            highlighted: Controller.currentAction === "keypoints"
+                            iconName: "format-list-unordered"
+                            text: CachyI18n.i18n("Puntos clave")
+                            checked: Controller.currentAction === "keypoints"
                             enabled: !Controller.isGenerating && Controller.selectedText.length > 0
                             onClicked: {
                                 Controller.applyAction("keypoints");
@@ -331,11 +325,11 @@ Kirigami.ApplicationWindow {
                             }
                         }
 
-                        QQC2.Button {
+                        CachyToolbarButton {
                             Layout.fillWidth: true
-                            icon.name: "view-form-table"
-                            text: i18n("Tabla")
-                            highlighted: Controller.currentAction === "table"
+                            iconName: "view-form-table"
+                            text: CachyI18n.i18n("Tabla")
+                            checked: Controller.currentAction === "table"
                             enabled: !Controller.isGenerating && Controller.selectedText.length > 0
                             onClicked: {
                                 Controller.applyAction("table");
@@ -346,23 +340,25 @@ Kirigami.ApplicationWindow {
                         }
                     }
 
-                    // Row B: Reescribir por Tonos (Apple Intelligence Tone Pills)
+                    // --- Fila B: reescritura por tonos ---
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 8
+                        Layout.minimumWidth: 0
+                        spacing: 6
 
-                        QQC2.Label {
-                            text: i18n("Reescribir:")
-                            font.bold: true
-                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                            color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.textColor, Kirigami.Theme.backgroundColor, 0.3)
+                        Text {
+                            text: CachyI18n.i18n("Reescribir:")
+                            font.pixelSize: 11
+                            font.weight: Font.DemiBold
+                            color: CachyTheme.textMuted
+                            elide: Text.ElideRight
                         }
 
-                        QQC2.Button {
+                        CachyToolbarButton {
                             Layout.fillWidth: true
-                            icon.name: "document-edit-symbolic"
-                            text: i18n("Estándar")
-                            highlighted: Controller.currentAction === "rewrite" && Controller.currentTone === ""
+                            iconName: "document-edit-symbolic"
+                            text: CachyI18n.i18n("Estándar")
+                            checked: Controller.currentAction === "rewrite" && Controller.currentTone === ""
                             enabled: !Controller.isGenerating && Controller.selectedText.length > 0
                             onClicked: {
                                 Controller.applyAction("rewrite", "");
@@ -372,11 +368,11 @@ Kirigami.ApplicationWindow {
                             }
                         }
 
-                        QQC2.Button {
+                        CachyToolbarButton {
                             Layout.fillWidth: true
-                            icon.name: "user"
-                            text: i18n("Amigable")
-                            highlighted: Controller.currentAction === "rewrite" && Controller.currentTone === "friendly"
+                            iconName: "user-symbolic"
+                            text: CachyI18n.i18n("Amigable")
+                            checked: Controller.currentAction === "rewrite" && Controller.currentTone === "friendly"
                             enabled: !Controller.isGenerating && Controller.selectedText.length > 0
                             onClicked: {
                                 Controller.applyAction("rewrite", "friendly");
@@ -386,11 +382,11 @@ Kirigami.ApplicationWindow {
                             }
                         }
 
-                        QQC2.Button {
+                        CachyToolbarButton {
                             Layout.fillWidth: true
-                            icon.name: "mail-signed"
-                            text: i18n("Profesional")
-                            highlighted: Controller.currentAction === "rewrite" && Controller.currentTone === "professional"
+                            iconName: "mail-signed-symbolic"
+                            text: CachyI18n.i18n("Profesional")
+                            checked: Controller.currentAction === "rewrite" && Controller.currentTone === "professional"
                             enabled: !Controller.isGenerating && Controller.selectedText.length > 0
                             onClicked: {
                                 Controller.applyAction("rewrite", "professional");
@@ -400,11 +396,11 @@ Kirigami.ApplicationWindow {
                             }
                         }
 
-                        QQC2.Button {
+                        CachyToolbarButton {
                             Layout.fillWidth: true
-                            icon.name: "speedometer"
-                            text: i18n("Conciso")
-                            highlighted: Controller.currentAction === "rewrite" && Controller.currentTone === "concise"
+                            iconName: "speedometer-symbolic"
+                            text: CachyI18n.i18n("Conciso")
+                            checked: Controller.currentAction === "rewrite" && Controller.currentTone === "concise"
                             enabled: !Controller.isGenerating && Controller.selectedText.length > 0
                             onClicked: {
                                 Controller.applyAction("rewrite", "concise");
@@ -417,31 +413,28 @@ Kirigami.ApplicationWindow {
                 }
             }
 
-            // 4. Result Area (Scrollable, Editable & with Regenerate / Revert Controls)
-            Rectangle {
+            // -----------------------------------------------------------------
+            // Resultado sugerido
+            // -----------------------------------------------------------------
+            CachyCard {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                radius: 10
-                color: Kirigami.Theme.backgroundColor
-                border.width: 1
-                border.color: Controller.isGenerating
-                    ? "#0DCAF0"
-                    : Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.backgroundColor, Kirigami.Theme.textColor, 0.15)
+                Layout.minimumWidth: 0
 
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: 10
+                contentItem: ColumnLayout {
                     spacing: 6
 
                     RowLayout {
                         Layout.fillWidth: true
+                        Layout.minimumWidth: 0
                         spacing: 6
 
-                        QQC2.Label {
-                            text: i18n("Resultado sugerido")
-                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize - 1
-                            font.bold: true
-                            color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.textColor, Kirigami.Theme.backgroundColor, 0.4)
+                        Text {
+                            text: CachyI18n.i18n("Resultado sugerido")
+                            font.pixelSize: 10
+                            font.weight: Font.DemiBold
+                            color: CachyTheme.textMuted
+                            elide: Text.ElideRight
                         }
 
                         Item { Layout.fillWidth: true }
@@ -453,32 +446,25 @@ Kirigami.ApplicationWindow {
                             implicitHeight: 16
                         }
 
-                        QQC2.Label {
+                        Text {
                             visible: Controller.resultText.length > 0
-                            text: Controller.resultText.length + " " + i18n("caracteres")
-                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize - 2
-                            color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.textColor, Kirigami.Theme.backgroundColor, 0.5)
+                            text: Controller.resultText.length + " " + CachyI18n.i18n("caracteres")
+                            font.pixelSize: 10
+                            color: CachyTheme.textMuted
+                            elide: Text.ElideRight
                         }
 
-                        // Regenerate alternate variant button (Apple Intelligence)
-                        QQC2.ToolButton {
-                            icon.name: "view-refresh"
-                            implicitWidth: 24
-                            implicitHeight: 24
+                        CachyToolbarButton {
+                            iconName: "view-refresh-symbolic"
+                            tooltipText: CachyI18n.i18n("Generar otra versión alternativa")
                             visible: Controller.resultText.length > 0 && !Controller.isGenerating
-                            QQC2.ToolTip.text: i18n("Regenerar otra versión alternativa")
-                            QQC2.ToolTip.visible: hovered
                             onClicked: Controller.regenerate()
                         }
 
-                        // Revert / Discard suggestion button (Apple Intelligence)
-                        QQC2.ToolButton {
-                            icon.name: "edit-undo"
-                            implicitWidth: 24
-                            implicitHeight: 24
+                        CachyToolbarButton {
+                            iconName: "edit-undo"
+                            tooltipText: CachyI18n.i18n("Descartar la sugerencia y volver al original")
                             visible: Controller.resultText.length > 0 && !Controller.isGenerating
-                            QQC2.ToolTip.text: i18n("Descartar sugerencia y volver al original")
-                            QQC2.ToolTip.visible: hovered
                             onClicked: {
                                 Controller.clearResult();
                                 root.sourceExpanded = true;
@@ -487,7 +473,6 @@ Kirigami.ApplicationWindow {
                     }
 
                     QQC2.ScrollView {
-                        id: resultScrollView
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         clip: true
@@ -498,14 +483,18 @@ Kirigami.ApplicationWindow {
                             width: parent.width
                             text: Controller.resultText
                             placeholderText: Controller.isGenerating
-                                ? i18n("Apple Intelligence está procesando tu texto...")
-                                : i18n("Elige una de las acciones arriba para mejorar el texto seleccionado.")
+                                ? CachyI18n.i18n("La IA local está procesando tu texto…")
+                                : CachyI18n.i18n("Elige una de las acciones de arriba para mejorar el texto seleccionado.")
                             readOnly: Controller.isGenerating
                             selectByMouse: true
                             wrapMode: TextEdit.Wrap
-                            color: Kirigami.Theme.textColor
-                            font.pixelSize: Kirigami.Theme.defaultFont.pixelSize
+                            color: CachyTheme.textPrimary
+                            selectionColor: CachyTheme.accentColor
+                            selectedTextColor: "#FFFFFF"
+                            placeholderTextColor: CachyTheme.textMuted
+                            font.pixelSize: 13
                             background: null
+
                             onTextChanged: {
                                 if (text !== Controller.resultText) {
                                     Controller.resultText = text;
@@ -516,32 +505,33 @@ Kirigami.ApplicationWindow {
                 }
             }
 
-            // 5. Footer Bar (Status & Primary Actions)
+            // -----------------------------------------------------------------
+            // Pie: estado y acciones primarias
+            // -----------------------------------------------------------------
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 8
+                Layout.minimumWidth: 0
+                spacing: 6
 
-                QQC2.Label {
+                Text {
                     Layout.fillWidth: true
-                    Layout.maximumWidth: root.width - 340
+                    Layout.minimumWidth: 0
                     text: Controller.statusMessage
                     elide: Text.ElideRight
-                    font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                    color: Kirigami.ColorUtils.linearInterpolation(Kirigami.Theme.textColor, Kirigami.Theme.backgroundColor, 0.35)
+                    font.pixelSize: 11
+                    color: CachyTheme.textMuted
                 }
 
-                Item { Layout.fillWidth: true }
-
-                QQC2.Button {
-                    text: i18n("Cancelar")
-                    icon.name: "process-stop"
+                CachyToolbarButton {
+                    text: CachyI18n.i18n("Cancelar")
+                    iconName: "process-stop-symbolic"
                     visible: Controller.isGenerating
                     onClicked: Controller.cancelGeneration()
                 }
 
-                QQC2.Button {
-                    text: i18n("Descartar")
-                    icon.name: "edit-undo"
+                CachyToolbarButton {
+                    text: CachyI18n.i18n("Descartar")
+                    iconName: "edit-undo"
                     visible: Controller.resultText.length > 0 && !Controller.isGenerating
                     onClicked: {
                         Controller.clearResult();
@@ -549,23 +539,23 @@ Kirigami.ApplicationWindow {
                     }
                 }
 
-                QQC2.Button {
-                    text: i18n("Copiar")
-                    icon.name: "edit-copy"
+                CachyToolbarButton {
+                    text: CachyI18n.i18n("Copiar")
+                    iconName: "edit-copy"
                     enabled: Controller.resultText.length > 0
                     onClicked: Controller.copyResult()
                 }
 
-                QQC2.Button {
-                    text: i18n("Reemplazar selección")
-                    icon.name: "document-edit-symbolic"
-                    highlighted: true
+                CachyToolbarButton {
+                    text: CachyI18n.i18n("Reemplazar la selección")
+                    iconName: "document-edit-symbolic"
+                    primary: true
                     enabled: Controller.resultText.length > 0
                     onClicked: Controller.replaceInApp()
                 }
             }
         }
-    }
+    ]
 
     Shortcut {
         sequence: "Escape"

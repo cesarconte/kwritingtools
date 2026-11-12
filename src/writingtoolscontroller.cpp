@@ -168,45 +168,45 @@ QString WritingToolsController::buildPrompt(const QString &action, const QString
 
     if (action == QStringLiteral("proofread")) {
         instruction = QStringLiteral(
-            "Actúa como la herramienta 'Corregir' (Proofread) de Apple Intelligence. "
+            "Actúa como la herramienta Corregir (Proofread): corrige la ortografía y la gramática sin alterar el sentido ni el estilo. "
             "Corrige cualquier error ortográfico, gramatical y de puntuación del siguiente texto en español de España, "
             "manteniendo escrupulosamente su significado, estilo y formato original. "
             "Devuelve únicamente el texto corregido listo para sustitución directa, sin comentarios adicionales ni explicaciones.");
     } else if (action == QStringLiteral("rewrite")) {
         if (tone == QStringLiteral("friendly")) {
             instruction = QStringLiteral(
-                "Actúa como Apple Intelligence en tono Amigable (Friendly). "
+                "Actúa como la reescritura en tono Amigable (Friendly): adapta el texto a un estilo cálido y cercano. "
                 "Reescribe el texto con un estilo cálido, cercano, empático y natural en español de España. "
                 "Devuelve únicamente la versión reescrita, sin introducciones ni despedidas.");
         } else if (tone == QStringLiteral("professional")) {
             instruction = QStringLiteral(
-                "Actúa como Apple Intelligence en tono Profesional (Professional). "
+                "Actúa como la reescritura en tono Profesional (Professional): adapta el texto a un estilo ejecutivo y corporativo. "
                 "Reescribe el texto con un estilo ejecutivo, pulcro, formal y persuasivo en español de España. "
                 "Devuelve únicamente la versión reescrita, sin introducciones ni despedidas.");
         } else if (tone == QStringLiteral("concise")) {
             instruction = QStringLiteral(
-                "Actúa como Apple Intelligence en tono Conciso (Concise). "
+                "Actúa como la reescritura en tono Conciso (Concise): sintetiza el texto y elimina redundancias conservando los datos clave. "
                 "Reescribe el texto de la manera más directa, clara y sintética posible en español de España, "
                 "eliminando cualquier palabra redundante. Devuelve únicamente la versión concisa.");
         } else {
             instruction = QStringLiteral(
-                "Actúa como Apple Intelligence (Herramienta Reescribir). "
+                "Actúa como la herramienta Reescribir (Rewrite): mejora la fluidez y la claridad del texto. "
                 "Mejora la redacción, fluidez y claridad del texto en español de España, conservando su mensaje. "
                 "Devuelve únicamente el texto mejorado.");
         }
     } else if (action == QStringLiteral("summary")) {
         instruction = QStringLiteral(
-            "Actúa como Apple Intelligence (Herramienta Resumir). "
+            "Actúa como la herramienta Resumir (Summary): resume el texto de forma ejecutiva y sintética. "
             "Genera un resumen ejecutivo de alta calidad, coherente y fluido en español de España. "
             "Devuelve únicamente el resumen.");
     } else if (action == QStringLiteral("keypoints")) {
         instruction = QStringLiteral(
-            "Actúa como Apple Intelligence (Puntos Clave). "
+            "Actúa como la herramienta Puntos Clave (Key points): extrae las ideas principales en viñetas Markdown. "
             "Extrae las ideas principales y conclusiones clave en una lista de viñetas Markdown concisas en español de España. "
             "Devuelve únicamente la lista con viñetas.");
     } else if (action == QStringLiteral("table")) {
         instruction = QStringLiteral(
-            "Actúa como Apple Intelligence (Crear Tabla). "
+            "Actúa como la herramienta Tabla (Table): estructura los datos del texto en una tabla Markdown. "
             "Estructura la información relevante del texto en una tabla Markdown con encabezados descriptivos y alineación limpia. "
             "Devuelve únicamente la tabla Markdown.");
     } else if (action.startsWith(QStringLiteral("translate:"))) {
@@ -259,7 +259,7 @@ void WritingToolsController::applyAction(const QString &action, const QString &t
     m_isGenerating = true;
     Q_EMIT isGeneratingChanged();
 
-    setStatus(QStringLiteral("Generando con Apple Intelligence (Ollama)..."));
+    setStatus(QStringLiteral("Generando con la IA local (Ollama)..."));
 
     const QString fullPrompt = buildPrompt(action, tone, m_selectedText);
     const QByteArray payload = buildOllamaPayload(fullPrompt);

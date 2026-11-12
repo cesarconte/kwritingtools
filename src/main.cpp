@@ -18,7 +18,9 @@
 #include <QKeySequence>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickStyle>
 #include <QQuickWindow>
+#include <QTimer>
 
 int main(int argc, char *argv[])
 {
@@ -30,8 +32,15 @@ int main(int argc, char *argv[])
     app.setQuitOnLastWindowClosed(false);
     app.setWindowIcon(QIcon::fromTheme(QStringLiteral("document-edit-symbolic"), QIcon::fromTheme(QStringLiteral("accessories-text-editor"))));
 
+    // Golden Gate parity: the application inherits the Plasma desktop style so
+    // menus, tooltips and scroll bars match the rest of the CachyOS.UI
+    // ecosystem instead of the raw Basic style.
+    if (qEnvironmentVariableIsEmpty("QT_QUICK_CONTROLS_STYLE")) {
+        QQuickStyle::setStyle(QStringLiteral("org.kde.desktop"));
+    }
+
     QCommandLineParser parser;
-    parser.setApplicationDescription(QStringLiteral("Herramientas de Escritura (Apple Intelligence) para KDE Plasma 6 Wayland"));
+    parser.setApplicationDescription(QStringLiteral("Herramientas de escritura con IA local para KDE Plasma 6 Wayland"));
     parser.addHelpOption();
     parser.addVersionOption();
 
@@ -52,11 +61,18 @@ int main(int argc, char *argv[])
                                   QStringLiteral("tono"));
     parser.addOption(rewriteOpt);
 
+    QCommandLineOption screenshotOpt(QStringLiteral("screenshot"),
+                                     QStringLiteral("Capture window screenshot and exit"),
+                                     QStringLiteral("path"));
+    parser.addOption(screenshotOpt);
+
     parser.process(app);
 
     const QString serviceName = QStringLiteral("org.cesar.kwritingtools");
     const QString objectPath = QStringLiteral("/WritingTools");
-    const QString interfaceName = QStringLiteral("org.cesar.kwritingtools");
+    // The object is exported with ExportAllSlots, so the D-Bus interface is
+    // derived from the class name of the controller.
+    const QString interfaceName = QStringLiteral("org.cesar.kwritingtools.WritingToolsController");
 
     QDBusConnection bus = QDBusConnection::sessionBus();
     if (bus.isConnected() && !bus.registerService(serviceName)) {
@@ -83,7 +99,7 @@ int main(int argc, char *argv[])
     // Atajo de teclado global Meta+Shift+W vía KF6 GlobalAccel
     auto *shortcutAction = new QAction(&app);
     shortcutAction->setObjectName(QStringLiteral("toggle_writing_tools"));
-    shortcutAction->setText(QStringLiteral("Herramientas de Escritura (Apple Intelligence)"));
+    shortcutAction->setText(QStringLiteral("Herramientas de Escritura (IA local)"));
     KGlobalAccel::setGlobalShortcut(shortcutAction, QKeySequence(Qt::META | Qt::SHIFT | Qt::Key_W));
     QObject::connect(shortcutAction, &QAction::triggered, &controller, [&controller]() {
         if (controller.hudVisible()) {
@@ -96,6 +112,9 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     KLocalization::setupLocalizedContext(&engine);
+    // The CachyOS.UI design system (Liquid Glass) is installed system wide or
+    // in the user prefix.
+    engine.addImportPath(QStringLiteral("/home/cesar/.local/lib/qt6/qml"));
     engine.rootContext()->setContextProperty(QStringLiteral("Controller"), &controller);
     engine.load(QUrl(QStringLiteral("qrc:/qml/Main.qml")));
 
@@ -113,6 +132,19 @@ int main(int argc, char *argv[])
                 win->hide();
             }
         });
+
+        if (parser.isSet(screenshotOpt)) {
+            const QString outPath = parser.value(screenshotOpt);
+            // The window visibility is bound to the controller state, so it is
+            // shown through it instead of directly.
+            controller.setHudVisible(true);
+            win->show();
+            QTimer::singleShot(900, win, [win, outPath, &app]() {
+                const QImage img = win->grabWindow();
+                img.save(outPath);
+                app.quit();
+            });
+        }
     }
 
     // Procesar opciones iniciales de CLI

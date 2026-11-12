@@ -1,10 +1,10 @@
 [Desktop Entry]
 Name=Herramientas de Escritura
 Name[es]=Herramientas de Escritura
-GenericName=Apple Intelligence Writing Tools
+GenericName=Herramientas de Escritura con IA local
 GenericName[es]=Herramientas de Escritura IA
-Comment=Asistente de redacción y corrección estilo Apple Intelligence con Ollama local
-Comment[es]=Asistente de redacción y corrección estilo Apple Intelligence con Ollama local
+Comment=Asistente de redacción y corrección con IA local (Ollama)
+Comment[es]=Asistente de redacción y corrección con IA local (Ollama)
 Exec=kwritingtools
 Icon=document-edit-symbolic
 Type=Application

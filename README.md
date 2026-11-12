@@ -1,12 +1,12 @@
-# KWritingTools (Apple Intelligence Writing Tools para KDE Plasma 6 Wayland)
+# KWritingTools — Herramientas de Escritura con IA local para KDE Plasma 6 (Wayland)
 
-Replicación nativa de alta fidelidad de **Apple Intelligence Writing Tools** (macOS 15 Sequoia / 16 Golden Gate) para **KDE Plasma 6 (Wayland)**, con aceleración de inferencia local mediante **Ollama** (`qwen2.5:7b`).
+Panel flotante de **redacción y corrección asistida por IA local** para **KDE Plasma 6 (Wayland)**, con inferencia acelerada mediante **Ollama** (`qwen2.5:7b`) y diseño **Golden Gate / Liquid Glass** (`CachyOS.UI`).
 
 ![KWritingTools](https://raw.githubusercontent.com/cesarconte/kwritingtools/main/screenshot.png)
 
 ## Características
 
-- 🧠 **Apple Intelligence UI**: Ventana flotante estilo *Liquid Glass* con borde iridiscente reactivo al estado de generación de IA.
+- 🧠 **Interfaz Golden Gate / Liquid Glass** (`CachyOS.UI`): ventana flotante con marco translúcido y desenfoque de KWin, cabecera de `44 px` con divisor duro de `1 px`, radio de `20 px` y proporción canónica `720 × 540`.
 - ⚡ **Acceso Global Inmediato**: Invócalo en cualquier parte del sistema con **`Meta+Shift+W`**.
 - 📋 **Integración Wayland Nativa**: Captura el texto seleccionado con `wl-paste` y permite sustituirlo directamente en la aplicación activa con un solo clic.
 - 🔄 **Acciones de Redacción Completas**:
