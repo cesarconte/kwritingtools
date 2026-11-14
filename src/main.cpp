@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     app.setApplicationDisplayName(QStringLiteral("Herramientas de Escritura"));
     app.setOrganizationDomain(QStringLiteral("cesar.org"));
     app.setQuitOnLastWindowClosed(false);
-    app.setWindowIcon(QIcon::fromTheme(QStringLiteral("document-edit-symbolic"), QIcon::fromTheme(QStringLiteral("accessories-text-editor"))));
+    app.setWindowIcon(QIcon::fromTheme(QStringLiteral("org.cesar.kwritingtools"), QIcon::fromTheme(QStringLiteral("document-edit-symbolic"))));
 
     // Golden Gate parity: the application inherits the Plasma desktop style so
     // menus, tooltips and scroll bars match the rest of the CachyOS.UI
