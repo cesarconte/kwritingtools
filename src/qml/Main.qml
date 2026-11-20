@@ -17,9 +17,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls as QQC2
 import QtQuick.Layouts
-import org.kde.kirigami as Kirigami
 import CachyOS.UI
 
 CachyWindow {
@@ -67,11 +65,10 @@ CachyWindow {
     // CABECERA — IZQUIERDA: marca de la aplicación
     // =========================================================================
     headerLeading: [
-        Kirigami.Icon {
+        CachyIcon {
             anchors.verticalCenter: parent.verticalCenter
-            source: "document-edit-symbolic"
-            width: 18
-            height: 18
+            name: "document-edit-symbolic"
+            size: 18
             color: Controller.isGenerating ? CachyTheme.accentColor : CachyTheme.textMuted
         }
     ]
@@ -109,7 +106,7 @@ CachyWindow {
                         }
                     }
 
-                    Text {
+                    CachyLabel {
                         text: CachyI18n.i18n("IA local (Qwen 2.5)")
                         font.pixelSize: 10
                         font.weight: Font.DemiBold
@@ -169,14 +166,13 @@ CachyWindow {
                         Layout.minimumWidth: 0
                         spacing: 6
 
-                        Kirigami.Icon {
-                            source: "edit-find-replace"
-                            Layout.preferredWidth: 14
-                            Layout.preferredHeight: 14
+                        CachyIcon {
+                            name: "edit-find-replace"
+                            size: 14
                             color: CachyTheme.textMuted
                         }
 
-                        Text {
+                        CachyLabel {
                             text: CachyI18n.i18n("Texto original")
                             font.pixelSize: 10
                             font.weight: Font.DemiBold
@@ -185,7 +181,7 @@ CachyWindow {
                         }
 
                         // Vista previa de una línea cuando está plegado
-                        Text {
+                        CachyLabel {
                             visible: !root.sourceExpanded
                             Layout.fillWidth: true
                             Layout.minimumWidth: 0
@@ -200,7 +196,7 @@ CachyWindow {
                             Layout.fillWidth: true
                         }
 
-                        Text {
+                        CachyLabel {
                             visible: root.sourceExpanded
                             text: Controller.selectedText.length > 0
                                 ? (Controller.selectedText.length + " " + CachyI18n.i18n("caracteres"))
@@ -236,31 +232,21 @@ CachyWindow {
                     }
 
                     // --- Editor ---
-                    QQC2.ScrollView {
+                    CachyTextArea {
+                        id: sourceEditor
                         visible: root.sourceExpanded
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        clip: true
-                        QQC2.ScrollBar.vertical.policy: QQC2.ScrollBar.AsNeeded
+                        text: Controller.selectedText
+                        placeholderText: CachyI18n.i18n("Selecciona texto en cualquier aplicación o pégalo aquí…")
+                        wrapMode: TextEdit.Wrap
+                        font.pixelSize: 12
+                        background: null
+                        selectByMouse: true
 
-                        QQC2.TextArea {
-                            id: sourceEditor
-                            width: parent.width
-                            text: Controller.selectedText
-                            placeholderText: CachyI18n.i18n("Selecciona texto en cualquier aplicación o pégalo aquí…")
-                            wrapMode: TextEdit.Wrap
-                            font.pixelSize: 12
-                            color: CachyTheme.textPrimary
-                            selectionColor: CachyTheme.accentColor
-                            selectedTextColor: "#FFFFFF"
-                            placeholderTextColor: CachyTheme.textMuted
-                            background: null
-                            selectByMouse: true
-
-                            onTextChanged: {
-                                if (text !== Controller.selectedText) {
-                                    Controller.selectedText = text;
-                                }
+                        onTextChanged: {
+                            if (text !== Controller.selectedText) {
+                                Controller.selectedText = text;
                             }
                         }
                     }
@@ -346,7 +332,7 @@ CachyWindow {
                         Layout.minimumWidth: 0
                         spacing: 6
 
-                        Text {
+                        CachyLabel {
                             text: CachyI18n.i18n("Reescribir:")
                             font.pixelSize: 11
                             font.weight: Font.DemiBold
@@ -429,7 +415,7 @@ CachyWindow {
                         Layout.minimumWidth: 0
                         spacing: 6
 
-                        Text {
+                        CachyLabel {
                             text: CachyI18n.i18n("Resultado sugerido")
                             font.pixelSize: 10
                             font.weight: Font.DemiBold
@@ -439,14 +425,13 @@ CachyWindow {
 
                         Item { Layout.fillWidth: true }
 
-                        QQC2.BusyIndicator {
+                        CachyBusyIndicator {
                             running: Controller.isGenerating
                             visible: Controller.isGenerating
-                            implicitWidth: 16
-                            implicitHeight: 16
+                            size: 16
                         }
 
-                        Text {
+                        CachyLabel {
                             visible: Controller.resultText.length > 0
                             text: Controller.resultText.length + " " + CachyI18n.i18n("caracteres")
                             font.pixelSize: 10
@@ -472,33 +457,23 @@ CachyWindow {
                         }
                     }
 
-                    QQC2.ScrollView {
+                    CachyTextArea {
+                        id: resultLabel
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        clip: true
-                        QQC2.ScrollBar.vertical.policy: QQC2.ScrollBar.AsNeeded
+                        text: Controller.resultText
+                        placeholderText: Controller.isGenerating
+                            ? CachyI18n.i18n("La IA local está procesando tu texto…")
+                            : CachyI18n.i18n("Elige una de las acciones de arriba para mejorar el texto seleccionado.")
+                        readOnly: Controller.isGenerating
+                        selectByMouse: true
+                        wrapMode: TextEdit.Wrap
+                        font.pixelSize: 13
+                        background: null
 
-                        QQC2.TextArea {
-                            id: resultLabel
-                            width: parent.width
-                            text: Controller.resultText
-                            placeholderText: Controller.isGenerating
-                                ? CachyI18n.i18n("La IA local está procesando tu texto…")
-                                : CachyI18n.i18n("Elige una de las acciones de arriba para mejorar el texto seleccionado.")
-                            readOnly: Controller.isGenerating
-                            selectByMouse: true
-                            wrapMode: TextEdit.Wrap
-                            color: CachyTheme.textPrimary
-                            selectionColor: CachyTheme.accentColor
-                            selectedTextColor: "#FFFFFF"
-                            placeholderTextColor: CachyTheme.textMuted
-                            font.pixelSize: 13
-                            background: null
-
-                            onTextChanged: {
-                                if (text !== Controller.resultText) {
-                                    Controller.resultText = text;
-                                }
+                        onTextChanged: {
+                            if (text !== Controller.resultText) {
+                                Controller.resultText = text;
                             }
                         }
                     }
@@ -513,7 +488,7 @@ CachyWindow {
                 Layout.minimumWidth: 0
                 spacing: 6
 
-                Text {
+                CachyLabel {
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
                     text: Controller.statusMessage

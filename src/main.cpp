@@ -28,6 +28,7 @@ int main(int argc, char *argv[])
     KLocalizedString::setApplicationDomain("kwritingtools");
     app.setApplicationName(QStringLiteral("kwritingtools"));
     app.setApplicationDisplayName(QStringLiteral("Herramientas de Escritura"));
+    app.setDesktopFileName(QStringLiteral("org.cesar.kwritingtools"));
     app.setOrganizationDomain(QStringLiteral("cesar.org"));
     app.setQuitOnLastWindowClosed(false);
     app.setWindowIcon(QIcon::fromTheme(QStringLiteral("org.cesar.kwritingtools"), QIcon::fromTheme(QStringLiteral("document-edit-symbolic"))));
@@ -112,9 +113,8 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     KLocalization::setupLocalizedContext(&engine);
-    // The CachyOS.UI design system (Liquid Glass) is installed system wide or
-    // in the user prefix.
-    engine.addImportPath(QStringLiteral("/home/cesar/.local/lib/qt6/qml"));
+    // The CachyOS.UI design system (Liquid Glass) is installed system-wide in /usr.
+    engine.addImportPath(QStringLiteral("/usr/lib/qt6/qml"));
     engine.rootContext()->setContextProperty(QStringLiteral("Controller"), &controller);
     engine.load(QUrl(QStringLiteral("qrc:/qml/Main.qml")));
 
