@@ -23,6 +23,8 @@ class WritingToolsController : public QObject
     Q_PROPERTY(bool isGenerating READ isGenerating NOTIFY isGeneratingChanged)
     Q_PROPERTY(QString currentAction READ currentAction NOTIFY currentActionChanged)
     Q_PROPERTY(QString currentTone READ currentTone NOTIFY currentToneChanged)
+    Q_PROPERTY(QString currentModel READ currentModel WRITE setCurrentModel NOTIFY currentModelChanged)
+    Q_PROPERTY(QStringList availableModels READ availableModels NOTIFY availableModelsChanged)
     Q_PROPERTY(QString statusMessage READ statusMessage NOTIFY statusMessageChanged)
     Q_PROPERTY(bool hudVisible READ hudVisible WRITE setHudVisible NOTIFY hudVisibleChanged)
 
@@ -39,6 +41,9 @@ public:
     bool isGenerating() const { return m_isGenerating; }
     QString currentAction() const { return m_currentAction; }
     QString currentTone() const { return m_currentTone; }
+    QString currentModel() const { return m_currentModel; }
+    void setCurrentModel(const QString &model);
+    QStringList availableModels() const { return m_availableModels; }
     QString statusMessage() const { return m_statusMessage; }
     bool hudVisible() const { return m_hudVisible; }
     void setHudVisible(bool visible);
@@ -46,6 +51,7 @@ public:
     // QML / User Invocations
     Q_INVOKABLE void captureSelection();
     Q_INVOKABLE void applyAction(const QString &action, const QString &tone = QString());
+    Q_INVOKABLE void refreshModels();
     Q_INVOKABLE void regenerate();
     Q_INVOKABLE void clearResult();
     Q_INVOKABLE void clearAll();
@@ -70,6 +76,8 @@ Q_SIGNALS:
     void isGeneratingChanged();
     void currentActionChanged();
     void currentToneChanged();
+    void currentModelChanged();
+    void availableModelsChanged();
     void statusMessageChanged();
     void hudVisibleChanged();
     void replaceRequested();
@@ -77,6 +85,7 @@ Q_SIGNALS:
 private Q_SLOTS:
     void onNetworkReadyRead();
     void onNetworkFinished();
+    void onModelsReplyFinished();
 
 private:
     void setStatus(const QString &msg);
@@ -87,9 +96,12 @@ private:
     bool m_isGenerating = false;
     QString m_currentAction;
     QString m_currentTone;
+    QString m_currentModel;
+    QStringList m_availableModels;
     QString m_statusMessage;
     bool m_hudVisible = false;
 
     QNetworkAccessManager *m_nam = nullptr;
     QNetworkReply *m_currentReply = nullptr;
+    QNetworkReply *m_modelsReply = nullptr;
 };

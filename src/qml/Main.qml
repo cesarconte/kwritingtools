@@ -81,14 +81,23 @@ CachyWindow {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 6
 
-            // Insignia del modelo local
+            // Insignia interactiva del modelo local
             Rectangle {
+                id: modelBadge
                 height: 24
-                implicitWidth: badgeRow.implicitWidth + 16
+                implicitWidth: badgeRow.implicitWidth + 18
                 radius: 12
-                color: CachyTheme.withAlpha(CachyTheme.accentColor, 0.14)
+                color: modelBadgeMouse.containsMouse
+                    ? CachyTheme.withAlpha(CachyTheme.accentColor, 0.24)
+                    : CachyTheme.withAlpha(CachyTheme.accentColor, 0.14)
                 border.width: 1
-                border.color: CachyTheme.withAlpha(CachyTheme.accentColor, 0.32)
+                border.color: modelBadgeMouse.containsMouse
+                    ? CachyTheme.accentColor
+                    : CachyTheme.withAlpha(CachyTheme.accentColor, 0.32)
+
+                Behavior on color {
+                    ColorAnimation { duration: CachyTheme.animFast }
+                }
 
                 RowLayout {
                     id: badgeRow
@@ -99,7 +108,7 @@ CachyWindow {
                         Layout.preferredWidth: 6
                         Layout.preferredHeight: 6
                         radius: 3
-                        color: Controller.isGenerating ? "#30D158" : CachyTheme.accentColor
+                        color: Controller && Controller.isGenerating ? "#30D158" : CachyTheme.accentColor
 
                         Behavior on color {
                             ColorAnimation { duration: CachyTheme.animFast }
@@ -107,10 +116,61 @@ CachyWindow {
                     }
 
                     CachyLabel {
-                        text: CachyI18n.i18n("IA local (Qwen 2.5)")
+                        text: "IA local (" + (Controller && Controller.currentModel.length > 0 ? Controller.currentModel : "qwen2.5:7b") + ")"
                         font.pixelSize: 10
                         font.weight: Font.DemiBold
                         color: CachyTheme.accentColor
+                    }
+
+                    CachyIcon {
+                        name: "arrow-down-symbolic"
+                        size: 9
+                        color: CachyTheme.accentColor
+                    }
+                }
+
+                MouseArea {
+                    id: modelBadgeMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: modelMenu.open()
+                }
+
+                CachyMenu {
+                    id: modelMenu
+                    y: modelBadge.height + 4
+
+                    Instantiator {
+                        model: Controller ? Controller.availableModels : []
+                        delegate: CachyMenuItem {
+                            id: modelItem
+                            required property string modelData
+                            text: modelItem.modelData
+                            checkable: true
+                            checked: Controller && Controller.currentModel === modelItem.modelData
+                            onTriggered: {
+                                if (Controller) {
+                                    Controller.currentModel = modelItem.modelData;
+                                }
+                            }
+                        }
+                        onObjectAdded: (index, object) => modelMenu.insertItem(index, object)
+                        onObjectRemoved: (index, object) => modelMenu.removeItem(object)
+                    }
+
+                    CachyMenuSeparator {
+                        visible: Controller && Controller.availableModels.length > 0
+                    }
+
+                    CachyMenuItem {
+                        text: CachyI18n.i18n("Actualizar modelos de Ollama")
+                        iconName: "view-refresh-symbolic"
+                        onTriggered: {
+                            if (Controller) {
+                                Controller.refreshModels();
+                            }
+                        }
                     }
                 }
             }

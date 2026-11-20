@@ -9,17 +9,83 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkRequest>
+#include <QSettings>
 #include <QUrl>
 
 WritingToolsController::WritingToolsController(QObject *parent)
     : QObject(parent)
     , m_nam(new QNetworkAccessManager(this))
 {
+    QSettings settings;
+    m_currentModel = settings.value(QStringLiteral("model"), QStringLiteral("qwen2.5:7b")).toString();
+    m_availableModels << m_currentModel;
+    refreshModels();
 }
 
 WritingToolsController::~WritingToolsController()
 {
     cancelGeneration();
+    if (m_modelsReply) {
+        m_modelsReply->abort();
+        delete m_modelsReply;
+        m_modelsReply = nullptr;
+    }
+}
+
+void WritingToolsController::setCurrentModel(const QString &model)
+{
+    if (m_currentModel != model && !model.isEmpty()) {
+        m_currentModel = model;
+        QSettings settings;
+        settings.setValue(QStringLiteral("model"), m_currentModel);
+        Q_EMIT currentModelChanged();
+    }
+}
+
+void WritingToolsController::refreshModels()
+{
+    if (m_modelsReply) {
+        m_modelsReply->abort();
+        m_modelsReply->deleteLater();
+        m_modelsReply = nullptr;
+    }
+
+    QNetworkRequest req(QUrl(QStringLiteral("http://127.0.0.1:11434/api/tags")));
+    m_modelsReply = m_nam->get(req);
+    connect(m_modelsReply, &QNetworkReply::finished, this, &WritingToolsController::onModelsReplyFinished);
+}
+
+void WritingToolsController::onModelsReplyFinished()
+{
+    if (!m_modelsReply) {
+        return;
+    }
+
+    if (m_modelsReply->error() == QNetworkReply::NoError) {
+        const QByteArray data = m_modelsReply->readAll();
+        const QJsonDocument doc = QJsonDocument::fromJson(data);
+        if (doc.isObject()) {
+            const QJsonArray modelsArray = doc.object().value(QStringLiteral("models")).toArray();
+            QStringList names;
+            for (const QJsonValue &val : modelsArray) {
+                const QString name = val.toObject().value(QStringLiteral("name")).toString();
+                if (!name.isEmpty() && !names.contains(name)) {
+                    names.append(name);
+                }
+            }
+            if (!names.isEmpty()) {
+                m_availableModels = names;
+                if (!m_availableModels.contains(m_currentModel)) {
+                    m_currentModel = m_availableModels.constFirst();
+                    Q_EMIT currentModelChanged();
+                }
+                Q_EMIT availableModelsChanged();
+            }
+        }
+    }
+
+    m_modelsReply->deleteLater();
+    m_modelsReply = nullptr;
 }
 
 void WritingToolsController::setSelectedText(const QString &text)
@@ -262,7 +328,7 @@ void WritingToolsController::applyAction(const QString &action, const QString &t
     setStatus(QStringLiteral("Generando con la IA local (Ollama)..."));
 
     const QString fullPrompt = buildPrompt(action, tone, m_selectedText);
-    const QByteArray payload = buildOllamaPayload(fullPrompt);
+    const QByteArray payload = buildOllamaPayload(fullPrompt, m_currentModel);
 
     QNetworkRequest req(QUrl(QStringLiteral("http://127.0.0.1:11434/api/generate")));
     req.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
