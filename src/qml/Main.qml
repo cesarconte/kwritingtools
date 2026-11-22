@@ -2,22 +2,15 @@
     SPDX-FileCopyrightText: 2026 Cesar
     SPDX-License-Identifier: GPL-2.0-or-later
 
-    KWritingTools — Herramientas de escritura con IA local.
-
-    Diseño Golden Gate / Liquid Glass (CachyOS.UI):
-      * ventana `CachyWindow` con marco translúcido, cabecera de 44 px con el
-        divisor duro de 1 px y radio de 20 px;
-      * la identidad de la aplicación y la insignia del modelo viven en la
-        cabecera, las acciones primarias en el pie;
-      * el texto original, la rejilla de acciones y el resultado se presentan
-        sobre `CachyCard`;
-      * toda la paleta, los radios y los espaciados salen de `CachyTheme`.
+    KWritingTools — Herramientas de Escritura con IA local (Apple Intelligence).
+    Diseño Golden Gate / Liquid Glass (CachyOS.UI).
 */
 
 pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls as QQC2
 import CachyOS.UI
 
 CachyWindow {
@@ -25,15 +18,13 @@ CachyWindow {
 
     title: CachyI18n.i18n("Herramientas de Escritura")
 
-    // Canonical proportion of the ecosystem (1.33): the panel keeps a stable
-    // shape and the result area takes the freed space.
     width: 720
-    height: 540
+    height: 560
     minimumWidth: 560
     minimumHeight: 460
 
     showTrafficLights: true
-    showTitleBarDivider: true          // divisor duro de 1 px
+    showTitleBarDivider: false         // Golden Gate: cabecera translúcida sin divisor duro
     showWindowFrame: true              // Liquid Glass: blur KWin + rim especular
     resizable: true
     cornerRadius: CachyTheme.radiusWindow
@@ -62,38 +53,45 @@ CachyWindow {
     }
 
     // =========================================================================
-    // CABECERA — IZQUIERDA: marca de la aplicación
+    // CABECERA — IZQUIERDA: icono Apple Intelligence (el título va centrado)
     // =========================================================================
     headerLeading: [
         CachyIcon {
             anchors.verticalCenter: parent.verticalCenter
-            name: "document-edit-symbolic"
-            size: 18
-            color: Controller.isGenerating ? CachyTheme.accentColor : CachyTheme.textMuted
+            name: "sparkles"
+            size: 16
+            color: Controller && Controller.isGenerating
+                ? "#AF52DE"
+                : (root.hasResult ? CachyTheme.accentColor : CachyPalette.textSecondary)
+
+            Behavior on color {
+                ColorAnimation { duration: CachyTheme.animFast }
+            }
         }
     ]
 
     // =========================================================================
-    // CABECERA — DERECHA: insignia del modelo y cerrar
+    // CABECERA — DERECHA: cápsula del modelo y cerrar
     // =========================================================================
     headerActions: [
         RowLayout {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 6
 
-            // Insignia interactiva del modelo local
+            // Insignia interactiva del modelo local en cápsula Liquid Glass
             Rectangle {
                 id: modelBadge
-                height: 24
+                implicitHeight: 26
+                Layout.preferredHeight: 26
                 implicitWidth: badgeRow.implicitWidth + 18
-                radius: 12
+                radius: 13
                 color: modelBadgeMouse.containsMouse
-                    ? CachyTheme.withAlpha(CachyTheme.accentColor, 0.24)
-                    : CachyTheme.withAlpha(CachyTheme.accentColor, 0.14)
+                    ? CachyPalette.cardBackgroundHover
+                    : CachyPalette.surfacePill
                 border.width: 1
                 border.color: modelBadgeMouse.containsMouse
                     ? CachyTheme.accentColor
-                    : CachyTheme.withAlpha(CachyTheme.accentColor, 0.32)
+                    : CachyPalette.specularBorder
 
                 Behavior on color {
                     ColorAnimation { duration: CachyTheme.animFast }
@@ -116,16 +114,16 @@ CachyWindow {
                     }
 
                     CachyLabel {
-                        text: "IA local (" + (Controller && Controller.currentModel.length > 0 ? Controller.currentModel : "qwen2.5:7b") + ")"
-                        font.pixelSize: 10
+                        text: (Controller && Controller.currentModel.length > 0 ? Controller.currentModel : "qwen2.5:7b")
+                        font.pixelSize: 11
                         font.weight: Font.DemiBold
-                        color: CachyTheme.accentColor
+                        color: CachyPalette.text
                     }
 
                     CachyIcon {
-                        name: "arrow-down-symbolic"
-                        size: 9
-                        color: CachyTheme.accentColor
+                        name: "chevron-down"
+                        size: 10
+                        color: CachyPalette.textMuted
                     }
                 }
 
@@ -165,7 +163,7 @@ CachyWindow {
 
                     CachyMenuItem {
                         text: CachyI18n.i18n("Actualizar modelos de Ollama")
-                        iconName: "view-refresh-symbolic"
+                        iconName: "refresh"
                         onTriggered: {
                             if (Controller) {
                                 Controller.refreshModels();
@@ -176,7 +174,7 @@ CachyWindow {
             }
 
             CachyToolbarButton {
-                iconName: "window-close-symbolic"
+                iconName: "close"
                 tooltipText: CachyI18n.i18n("Cerrar (Esc)")
                 onClicked: {
                     if (Controller) {
@@ -190,65 +188,282 @@ CachyWindow {
     ]
 
     // =========================================================================
-    // CONTENIDO
+    // CONTENIDO PRINCIPAL
     // =========================================================================
     contentData: [
         ColumnLayout {
             anchors.fill: parent
-            spacing: CachyTheme.spacingMedium
+            spacing: 5
 
             // -----------------------------------------------------------------
-            // Texto original (plegable y desplazable)
+            // 1. Campo Superior Cápsula: "Describe tu cambio…" (macOS Golden Gate)
+            // -----------------------------------------------------------------
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                spacing: 6
+
+                CachyTextField {
+                    id: customPromptInput
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    pillStyle: true
+                    leadingIcon: "sparkles"
+                    showClearButton: true
+                    placeholderText: CachyI18n.i18n("Describe tu cambio… (ej. más persuasivo, traduce al inglés, poema)")
+                    onAccepted: {
+                        if (text.trim().length > 0 && Controller && Controller.selectedText.length > 0) {
+                            Controller.applyAction("custom", text.trim());
+                            if (root.hasResult) {
+                                root.sourceExpanded = false;
+                            }
+                        }
+                    }
+                }
+
+                CachyButton {
+                    pillStyle: true
+                    primary: true
+                    iconName: "chevron-right"
+                    enabled: customPromptInput.text.trim().length > 0 && Controller && !Controller.isGenerating && Controller.selectedText.length > 0
+                    QQC2.ToolTip.visible: customRunHover.hovered
+                    QQC2.ToolTip.text: CachyI18n.i18n("Aplicar instrucción personalizada")
+                    QQC2.ToolTip.delay: 450
+                    onClicked: {
+                        if (customPromptInput.text.trim().length > 0 && Controller) {
+                            Controller.applyAction("custom", customPromptInput.text.trim());
+                            if (root.hasResult) {
+                                root.sourceExpanded = false;
+                            }
+                        }
+                    }
+
+                    HoverHandler {
+                        id: customRunHover
+                        cursorShape: Qt.PointingHandCursor
+                    }
+                }
+            }
+
+            // -----------------------------------------------------------------
+            // 2. Acciones Rápidas: Revisar, Reescribir, Tonos y Transformaciones
             // -----------------------------------------------------------------
             CachyCard {
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
+                Layout.minimumHeight: 66
+
+                contentItem: ColumnLayout {
+                    spacing: 4
+
+                    // Fila A: Botones destacados (Revisar y Reescribir) + Selector de Tonos
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        spacing: 6
+
+                        CachyToolbarGroup {
+                            CachyToolbarButton {
+                                iconName: "check"
+                                text: CachyI18n.i18n("Revisar")
+                                checked: Controller && Controller.currentAction === "proofread"
+                                enabled: Controller && !Controller.isGenerating && Controller.selectedText.length > 0
+                                onClicked: {
+                                    Controller.applyAction("proofread");
+                                    if (root.hasResult) {
+                                        root.sourceExpanded = false;
+                                    }
+                                }
+                            }
+
+                            CachyToolbarButton {
+                                iconName: "sparkles"
+                                text: CachyI18n.i18n("Reescribir")
+                                checked: Controller && Controller.currentAction === "rewrite" && Controller.currentTone === ""
+                                enabled: Controller && !Controller.isGenerating && Controller.selectedText.length > 0
+                                onClicked: {
+                                    Controller.applyAction("rewrite", "");
+                                    if (root.hasResult) {
+                                        root.sourceExpanded = false;
+                                    }
+                                }
+                            }
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
+                        // Selector rápido de tonos
+                        CachyLabel {
+                            text: CachyI18n.i18n("Tono:")
+                            font.pixelSize: 11
+                            font.weight: Font.DemiBold
+                            color: CachyPalette.textMuted
+                        }
+
+                        CachyToolbarGroup {
+                            CachyToolbarButton {
+                                text: CachyI18n.i18n("Amistoso")
+                                checked: Controller && Controller.currentAction === "rewrite" && Controller.currentTone === "friendly"
+                                enabled: Controller && !Controller.isGenerating && Controller.selectedText.length > 0
+                                onClicked: {
+                                    Controller.applyAction("rewrite", "friendly");
+                                    if (root.hasResult) {
+                                        root.sourceExpanded = false;
+                                    }
+                                }
+                            }
+
+                            CachyToolbarButton {
+                                text: CachyI18n.i18n("Profesional")
+                                checked: Controller && Controller.currentAction === "rewrite" && Controller.currentTone === "professional"
+                                enabled: Controller && !Controller.isGenerating && Controller.selectedText.length > 0
+                                onClicked: {
+                                    Controller.applyAction("rewrite", "professional");
+                                    if (root.hasResult) {
+                                        root.sourceExpanded = false;
+                                    }
+                                }
+                            }
+
+                            CachyToolbarButton {
+                                text: CachyI18n.i18n("Conciso")
+                                checked: Controller && Controller.currentAction === "rewrite" && Controller.currentTone === "concise"
+                                enabled: Controller && !Controller.isGenerating && Controller.selectedText.length > 0
+                                onClicked: {
+                                    Controller.applyAction("rewrite", "concise");
+                                    if (root.hasResult) {
+                                        root.sourceExpanded = false;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Fila B: Transformaciones estructuradas
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        spacing: 6
+
+                        CachyLabel {
+                            text: CachyI18n.i18n("Transformar:")
+                            font.pixelSize: 11
+                            font.weight: Font.DemiBold
+                            color: CachyPalette.textMuted
+                        }
+
+                        CachyToolbarGroup {
+                            Layout.fillWidth: true
+                            spacing: 4
+
+                            CachyToolbarButton {
+                                iconName: "format-text"
+                                text: CachyI18n.i18n("Resumen")
+                                checked: Controller && Controller.currentAction === "summary"
+                                enabled: Controller && !Controller.isGenerating && Controller.selectedText.length > 0
+                                onClicked: {
+                                    Controller.applyAction("summary");
+                                    if (root.hasResult) {
+                                        root.sourceExpanded = false;
+                                    }
+                                }
+                            }
+
+                            CachyToolbarButton {
+                                iconName: "checklist"
+                                text: CachyI18n.i18n("Puntos clave")
+                                checked: Controller && Controller.currentAction === "keypoints"
+                                enabled: Controller && !Controller.isGenerating && Controller.selectedText.length > 0
+                                onClicked: {
+                                    Controller.applyAction("keypoints");
+                                    if (root.hasResult) {
+                                        root.sourceExpanded = false;
+                                    }
+                                }
+                            }
+
+                            CachyToolbarButton {
+                                iconName: "list"
+                                text: CachyI18n.i18n("Lista")
+                                checked: Controller && Controller.currentAction === "list"
+                                enabled: Controller && !Controller.isGenerating && Controller.selectedText.length > 0
+                                onClicked: {
+                                    Controller.applyAction("list");
+                                    if (root.hasResult) {
+                                        root.sourceExpanded = false;
+                                    }
+                                }
+                            }
+
+                            CachyToolbarButton {
+                                iconName: "table"
+                                text: CachyI18n.i18n("Tabla")
+                                checked: Controller && Controller.currentAction === "table"
+                                enabled: Controller && !Controller.isGenerating && Controller.selectedText.length > 0
+                                onClicked: {
+                                    Controller.applyAction("table");
+                                    if (root.hasResult) {
+                                        root.sourceExpanded = false;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // -----------------------------------------------------------------
+            // 3. Texto Original (Plegable)
+            // -----------------------------------------------------------------
+            CachyCard {
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                Layout.minimumHeight: root.sourceExpanded ? 54 : 44
                 Layout.preferredHeight: {
                     if (!root.sourceExpanded) {
-                        return 52;
+                        return 44;
                     }
                     if (root.hasResult) {
-                        return Math.min(140, Math.max(86, sourceEditor.contentHeight + 46));
+                        return Math.min(84, Math.max(54, sourceEditor.contentHeight + 28));
                     }
-                    return Math.min(230, Math.max(96, sourceEditor.contentHeight + 46));
+                    return Math.min(110, Math.max(58, sourceEditor.contentHeight + 28));
                 }
 
                 Behavior on Layout.preferredHeight {
-                    NumberAnimation { duration: 200; easing.type: Easing.InOutQuad }
+                    NumberAnimation { duration: 180; easing.type: Easing.InOutQuad }
                 }
 
                 contentItem: ColumnLayout {
                     spacing: 4
 
-                    // --- Barra de la tarjeta ---
                     RowLayout {
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
                         spacing: 6
 
                         CachyIcon {
-                            name: "edit-find-replace"
-                            size: 14
-                            color: CachyTheme.textMuted
+                            name: "search"
+                            size: 13
+                            color: CachyPalette.textMuted
                         }
 
                         CachyLabel {
                             text: CachyI18n.i18n("Texto original")
-                            font.pixelSize: 10
+                            font.pixelSize: 11
                             font.weight: Font.DemiBold
-                            color: CachyTheme.textMuted
-                            elide: Text.ElideRight
+                            color: CachyPalette.textMuted
                         }
 
-                        // Vista previa de una línea cuando está plegado
                         CachyLabel {
                             visible: !root.sourceExpanded
                             Layout.fillWidth: true
                             Layout.minimumWidth: 0
-                            text: "— " + Controller.selectedText.replace(/[\r\n]+/g, " ")
+                            text: "— " + (Controller ? Controller.selectedText.replace(/[\r\n]+/g, " ") : "")
                             elide: Text.ElideRight
                             font.pixelSize: 11
-                            color: CachyTheme.textMuted
+                            color: CachyPalette.textMuted
                         }
 
                         Item {
@@ -258,16 +473,16 @@ CachyWindow {
 
                         CachyLabel {
                             visible: root.sourceExpanded
-                            text: Controller.selectedText.length > 0
+                            text: Controller && Controller.selectedText.length > 0
                                 ? (Controller.selectedText.length + " " + CachyI18n.i18n("caracteres"))
                                 : ""
                             font.pixelSize: 10
-                            color: CachyTheme.textMuted
+                            color: CachyPalette.textMuted
                             elide: Text.ElideRight
                         }
 
                         CachyToolbarButton {
-                            iconName: root.sourceExpanded ? "arrow-up-symbolic" : "arrow-down-symbolic"
+                            iconName: root.sourceExpanded ? "chevron-up" : "chevron-down"
                             tooltipText: root.sourceExpanded
                                 ? CachyI18n.i18n("Plegar el texto original")
                                 : CachyI18n.i18n("Desplegar el texto original")
@@ -275,29 +490,32 @@ CachyWindow {
                         }
 
                         CachyToolbarButton {
-                            iconName: "edit-paste"
+                            iconName: "copy"
                             tooltipText: CachyI18n.i18n("Pegar la selección activa del sistema")
                             onClicked: {
-                                Controller.captureSelection();
-                                root.sourceExpanded = true;
+                                if (Controller) {
+                                    Controller.captureSelection();
+                                    root.sourceExpanded = true;
+                                }
                             }
                         }
 
                         CachyToolbarButton {
-                            iconName: "edit-clear"
+                            iconName: "close"
                             tooltipText: CachyI18n.i18n("Limpiar el texto")
-                            visible: Controller.selectedText.length > 0
+                            visible: Controller && Controller.selectedText.length > 0
                             onClicked: Controller.clearAll()
                         }
                     }
 
-                    // --- Editor ---
                     CachyTextArea {
                         id: sourceEditor
                         visible: root.sourceExpanded
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        text: Controller.selectedText
+                        Layout.minimumWidth: 0
+                        Layout.minimumHeight: 0
+                        text: Controller ? Controller.selectedText : ""
                         placeholderText: CachyI18n.i18n("Selecciona texto en cualquier aplicación o pégalo aquí…")
                         wrapMode: TextEdit.Wrap
                         font.pixelSize: 12
@@ -305,7 +523,7 @@ CachyWindow {
                         selectByMouse: true
 
                         onTextChanged: {
-                            if (text !== Controller.selectedText) {
+                            if (Controller && text !== Controller.selectedText) {
                                 Controller.selectedText = text;
                             }
                         }
@@ -314,202 +532,82 @@ CachyWindow {
             }
 
             // -----------------------------------------------------------------
-            // Rejilla de acciones
+            // 4. Resultado Sugerido con Efecto Luminoso de Generación
             // -----------------------------------------------------------------
             CachyCard {
-                Layout.fillWidth: true
-                Layout.minimumWidth: 0
-
-                contentItem: ColumnLayout {
-                    spacing: 6
-
-                    // --- Fila A: correcciones directas ---
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.minimumWidth: 0
-                        spacing: 6
-
-                        CachyToolbarButton {
-                            Layout.fillWidth: true
-                            iconName: "tools-check-spelling"
-                            text: CachyI18n.i18n("Corregir")
-                            checked: Controller.currentAction === "proofread"
-                            enabled: !Controller.isGenerating && Controller.selectedText.length > 0
-                            onClicked: {
-                                Controller.applyAction("proofread");
-                                if (root.hasResult) {
-                                    root.sourceExpanded = false;
-                                }
-                            }
-                        }
-
-                        CachyToolbarButton {
-                            Layout.fillWidth: true
-                            iconName: "view-list-tree"
-                            text: CachyI18n.i18n("Resumir")
-                            checked: Controller.currentAction === "summary"
-                            enabled: !Controller.isGenerating && Controller.selectedText.length > 0
-                            onClicked: {
-                                Controller.applyAction("summary");
-                                if (root.hasResult) {
-                                    root.sourceExpanded = false;
-                                }
-                            }
-                        }
-
-                        CachyToolbarButton {
-                            Layout.fillWidth: true
-                            iconName: "format-list-unordered"
-                            text: CachyI18n.i18n("Puntos clave")
-                            checked: Controller.currentAction === "keypoints"
-                            enabled: !Controller.isGenerating && Controller.selectedText.length > 0
-                            onClicked: {
-                                Controller.applyAction("keypoints");
-                                if (root.hasResult) {
-                                    root.sourceExpanded = false;
-                                }
-                            }
-                        }
-
-                        CachyToolbarButton {
-                            Layout.fillWidth: true
-                            iconName: "view-form-table"
-                            text: CachyI18n.i18n("Tabla")
-                            checked: Controller.currentAction === "table"
-                            enabled: !Controller.isGenerating && Controller.selectedText.length > 0
-                            onClicked: {
-                                Controller.applyAction("table");
-                                if (root.hasResult) {
-                                    root.sourceExpanded = false;
-                                }
-                            }
-                        }
-                    }
-
-                    // --- Fila B: reescritura por tonos ---
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.minimumWidth: 0
-                        spacing: 6
-
-                        CachyLabel {
-                            text: CachyI18n.i18n("Reescribir:")
-                            font.pixelSize: 11
-                            font.weight: Font.DemiBold
-                            color: CachyTheme.textMuted
-                            elide: Text.ElideRight
-                        }
-
-                        CachyToolbarButton {
-                            Layout.fillWidth: true
-                            iconName: "document-edit-symbolic"
-                            text: CachyI18n.i18n("Estándar")
-                            checked: Controller.currentAction === "rewrite" && Controller.currentTone === ""
-                            enabled: !Controller.isGenerating && Controller.selectedText.length > 0
-                            onClicked: {
-                                Controller.applyAction("rewrite", "");
-                                if (root.hasResult) {
-                                    root.sourceExpanded = false;
-                                }
-                            }
-                        }
-
-                        CachyToolbarButton {
-                            Layout.fillWidth: true
-                            iconName: "user-symbolic"
-                            text: CachyI18n.i18n("Amigable")
-                            checked: Controller.currentAction === "rewrite" && Controller.currentTone === "friendly"
-                            enabled: !Controller.isGenerating && Controller.selectedText.length > 0
-                            onClicked: {
-                                Controller.applyAction("rewrite", "friendly");
-                                if (root.hasResult) {
-                                    root.sourceExpanded = false;
-                                }
-                            }
-                        }
-
-                        CachyToolbarButton {
-                            Layout.fillWidth: true
-                            iconName: "mail-signed-symbolic"
-                            text: CachyI18n.i18n("Profesional")
-                            checked: Controller.currentAction === "rewrite" && Controller.currentTone === "professional"
-                            enabled: !Controller.isGenerating && Controller.selectedText.length > 0
-                            onClicked: {
-                                Controller.applyAction("rewrite", "professional");
-                                if (root.hasResult) {
-                                    root.sourceExpanded = false;
-                                }
-                            }
-                        }
-
-                        CachyToolbarButton {
-                            Layout.fillWidth: true
-                            iconName: "speedometer-symbolic"
-                            text: CachyI18n.i18n("Conciso")
-                            checked: Controller.currentAction === "rewrite" && Controller.currentTone === "concise"
-                            enabled: !Controller.isGenerating && Controller.selectedText.length > 0
-                            onClicked: {
-                                Controller.applyAction("rewrite", "concise");
-                                if (root.hasResult) {
-                                    root.sourceExpanded = false;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // -----------------------------------------------------------------
-            // Resultado sugerido
-            // -----------------------------------------------------------------
-            CachyCard {
+                id: resultCard
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.minimumWidth: 0
+                Layout.minimumHeight: 50
+
+                // Efecto luminoso iridiscente de Apple Intelligence durante la generación
+                Rectangle {
+                    id: glowRect
+                    anchors.fill: parent
+                    radius: CachyTheme.radiusMedium
+                    color: "transparent"
+                    border.width: 2
+                    border.color: "#AF52DE"
+                    visible: Controller ? Controller.isGenerating : false
+                    opacity: 0.75
+
+                    SequentialAnimation {
+                        running: glowRect.visible
+                        loops: Animation.Infinite
+                        NumberAnimation { target: glowRect; property: "opacity"; from: 0.35; to: 0.85; duration: 900; easing.type: Easing.InOutQuad }
+                        NumberAnimation { target: glowRect; property: "opacity"; from: 0.85; to: 0.35; duration: 900; easing.type: Easing.InOutQuad }
+                    }
+                }
 
                 contentItem: ColumnLayout {
-                    spacing: 6
+                    spacing: 4
 
                     RowLayout {
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
                         spacing: 6
 
+                        CachyIcon {
+                            name: "sparkles"
+                            size: 13
+                            color: (Controller && Controller.isGenerating) ? "#AF52DE" : CachyTheme.accentColor
+                        }
+
                         CachyLabel {
                             text: CachyI18n.i18n("Resultado sugerido")
-                            font.pixelSize: 10
+                            font.pixelSize: 11
                             font.weight: Font.DemiBold
-                            color: CachyTheme.textMuted
-                            elide: Text.ElideRight
+                            color: CachyPalette.text
                         }
 
                         Item { Layout.fillWidth: true }
 
                         CachyBusyIndicator {
-                            running: Controller.isGenerating
-                            visible: Controller.isGenerating
+                            running: Controller ? Controller.isGenerating : false
+                            visible: Controller ? Controller.isGenerating : false
                             size: 16
                         }
 
                         CachyLabel {
-                            visible: Controller.resultText.length > 0
-                            text: Controller.resultText.length + " " + CachyI18n.i18n("caracteres")
+                            visible: Controller && Controller.resultText.length > 0
+                            text: (Controller ? Controller.resultText.length : 0) + " " + CachyI18n.i18n("caracteres")
                             font.pixelSize: 10
-                            color: CachyTheme.textMuted
+                            color: CachyPalette.textMuted
                             elide: Text.ElideRight
                         }
 
                         CachyToolbarButton {
-                            iconName: "view-refresh-symbolic"
+                            iconName: "refresh"
                             tooltipText: CachyI18n.i18n("Generar otra versión alternativa")
-                            visible: Controller.resultText.length > 0 && !Controller.isGenerating
+                            visible: Controller && Controller.resultText.length > 0 && !Controller.isGenerating
                             onClicked: Controller.regenerate()
                         }
 
                         CachyToolbarButton {
-                            iconName: "edit-undo"
+                            iconName: "close"
                             tooltipText: CachyI18n.i18n("Descartar la sugerencia y volver al original")
-                            visible: Controller.resultText.length > 0 && !Controller.isGenerating
+                            visible: Controller && Controller.resultText.length > 0 && !Controller.isGenerating
                             onClicked: {
                                 Controller.clearResult();
                                 root.sourceExpanded = true;
@@ -521,18 +619,20 @@ CachyWindow {
                         id: resultLabel
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        text: Controller.resultText
-                        placeholderText: Controller.isGenerating
+                        Layout.minimumWidth: 0
+                        Layout.minimumHeight: 0
+                        text: Controller ? Controller.resultText : ""
+                        placeholderText: (Controller && Controller.isGenerating)
                             ? CachyI18n.i18n("La IA local está procesando tu texto…")
-                            : CachyI18n.i18n("Elige una de las acciones de arriba para mejorar el texto seleccionado.")
-                        readOnly: Controller.isGenerating
+                            : CachyI18n.i18n("Elige una acción o escribe una instrucción para transformar el texto.")
+                        readOnly: Controller ? Controller.isGenerating : false
                         selectByMouse: true
                         wrapMode: TextEdit.Wrap
                         font.pixelSize: 13
                         background: null
 
                         onTextChanged: {
-                            if (text !== Controller.resultText) {
+                            if (Controller && text !== Controller.resultText) {
                                 Controller.resultText = text;
                             }
                         }
@@ -541,51 +641,63 @@ CachyWindow {
             }
 
             // -----------------------------------------------------------------
-            // Pie: estado y acciones primarias
+            // 5. Pie de Ventana: Estado y Botones Cápsula macOS Golden Gate
             // -----------------------------------------------------------------
             RowLayout {
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
-                spacing: 6
+                spacing: 8
 
                 CachyLabel {
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
-                    text: Controller.statusMessage
+                    text: Controller ? Controller.statusMessage : ""
                     elide: Text.ElideRight
                     font.pixelSize: 11
-                    color: CachyTheme.textMuted
+                    color: CachyPalette.textMuted
                 }
 
-                CachyToolbarButton {
+                CachyButton {
+                    pillStyle: true
                     text: CachyI18n.i18n("Cancelar")
-                    iconName: "process-stop-symbolic"
-                    visible: Controller.isGenerating
+                    iconName: "close"
+                    visible: Controller ? Controller.isGenerating : false
                     onClicked: Controller.cancelGeneration()
                 }
 
-                CachyToolbarButton {
+                CachyButton {
+                    pillStyle: true
+                    flat: true
                     text: CachyI18n.i18n("Descartar")
-                    iconName: "edit-undo"
-                    visible: Controller.resultText.length > 0 && !Controller.isGenerating
+                    visible: Controller && Controller.resultText.length > 0 && !Controller.isGenerating
                     onClicked: {
                         Controller.clearResult();
                         root.sourceExpanded = true;
                     }
                 }
 
-                CachyToolbarButton {
+                CachyButton {
+                    pillStyle: true
+                    iconName: "copy"
                     text: CachyI18n.i18n("Copiar")
-                    iconName: "edit-copy"
-                    enabled: Controller.resultText.length > 0
+                    enabled: Controller && Controller.resultText.length > 0
                     onClicked: Controller.copyResult()
                 }
 
-                CachyToolbarButton {
-                    text: CachyI18n.i18n("Reemplazar la selección")
-                    iconName: "document-edit-symbolic"
+                CachyButton {
+                    pillStyle: true
+                    iconName: "refresh"
+                    text: CachyI18n.i18n("Reintentar")
+                    visible: Controller && Controller.resultText.length > 0 && !Controller.isGenerating
+                    onClicked: Controller.regenerate()
+                }
+
+                CachyButton {
+                    pillStyle: true
                     primary: true
-                    enabled: Controller.resultText.length > 0
+                    iconName: "check"
+                    text: CachyI18n.i18n("Reemplazar")
+                    enabled: Controller && Controller.resultText.length > 0
                     onClicked: Controller.replaceInApp()
                 }
             }

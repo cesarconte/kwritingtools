@@ -45,8 +45,14 @@ private Q_SLOTS:
         const QString pKeypoints = WritingToolsController::buildPrompt(QStringLiteral("keypoints"), QString(), input);
         QVERIFY(pKeypoints.contains(QStringLiteral("Puntos Clave")));
 
+        const QString pList = WritingToolsController::buildPrompt(QStringLiteral("list"), QString(), input);
+        QVERIFY(pList.contains(QStringLiteral("Lista")));
+
         const QString pTable = WritingToolsController::buildPrompt(QStringLiteral("table"), QString(), input);
         QVERIFY(pTable.contains(QStringLiteral("Tabla")));
+
+        const QString pCustom = WritingToolsController::buildPrompt(QStringLiteral("custom"), QStringLiteral("Hazlo en verso"), input);
+        QVERIFY(pCustom.contains(QStringLiteral("Hazlo en verso")));
 
         const QString pTrans = WritingToolsController::buildPrompt(QStringLiteral("translate:en"), QString(), input);
         QVERIFY(pTrans.contains(QStringLiteral("Traduce")));

@@ -44,7 +44,7 @@ Panel flotante de **redacción y corrección asistida por IA local** para **KDE 
 ### Construcción
 
 ```bash
-cmake -B build -S . -DCMAKE_INSTALL_PREFIX=$HOME/.local -DBUILD_TESTING=ON
+cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_TESTING=ON
 cmake --build build -j$(nproc)
 ctest --test-dir build --output-on-failure
 cmake --install build

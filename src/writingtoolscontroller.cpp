@@ -270,11 +270,19 @@ QString WritingToolsController::buildPrompt(const QString &action, const QString
             "Actúa como la herramienta Puntos Clave (Key points): extrae las ideas principales en viñetas Markdown. "
             "Extrae las ideas principales y conclusiones clave en una lista de viñetas Markdown concisas en español de España. "
             "Devuelve únicamente la lista con viñetas.");
+    } else if (action == QStringLiteral("list")) {
+        instruction = QStringLiteral(
+            "Actúa como la herramienta Lista (List): estructura la información en una lista limpia, organizada y concisa en español de España. "
+            "Devuelve únicamente la lista formateada, sin comentarios ni introducciones.");
     } else if (action == QStringLiteral("table")) {
         instruction = QStringLiteral(
             "Actúa como la herramienta Tabla (Table): estructura los datos del texto en una tabla Markdown. "
             "Estructura la información relevante del texto en una tabla Markdown con encabezados descriptivos y alineación limpia. "
             "Devuelve únicamente la tabla Markdown.");
+    } else if (action == QStringLiteral("custom")) {
+        instruction = QStringLiteral(
+            "Actúa como asistente de redacción inteligente. Aplica estrictamente la siguiente instrucción al texto: \"%1\". "
+            "Devuelve únicamente el texto transformado en español de España, listo para sustitución directa, sin comentarios adicionales ni explicaciones.").arg(tone);
     } else if (action.startsWith(QStringLiteral("translate:"))) {
         const QString targetLang = action.mid(10) == QStringLiteral("en") ? QStringLiteral("inglés") : QStringLiteral("español");
         instruction = QStringLiteral(
